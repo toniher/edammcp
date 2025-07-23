@@ -1,6 +1,6 @@
 # EDAM MCP Server Documentation
 
-Welcome to the EDAM MCP Server documentation! This server provides powerful tools for mapping descriptions to EDAM ontology concepts and suggesting new concepts when no suitable match exists.
+Welcome to the EDAM MCP Server documentation! This server provides powerful tools for mapping descriptions to EDAM ontology concepts and suggesting new concepts when no suitable match exists. Developer docs at https://edamontology.github.io/edammcp
 
 ## 🚀 Quick Start
 
