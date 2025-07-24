@@ -45,6 +45,8 @@ response = await suggest_new_concept(
 # Returns: "Quantum Protein Folding" with hierarchical placement
 ```
 
+Prospectively, this could then be used to generate an automatic PR in knowledge graph change language (KGCL) to the maintainers of the ontology.
+
 ## 📚 Documentation Sections
 
 ### For Developers
