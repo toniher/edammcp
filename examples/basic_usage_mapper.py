@@ -33,7 +33,7 @@ async def example_mapping():
         "FASTQ file format",
         "gene expression analysis",
         "protein structure prediction",
-        "metabolomics data processing"
+        "metabolomics data processing",
     ]
 
     for description in descriptions:
@@ -44,7 +44,7 @@ async def example_mapping():
                 description=description,
                 context="bioinformatics tool",
                 max_results=3,
-                min_confidence=0.5
+                min_confidence=0.5,
             )
 
             if response.matches:
@@ -58,8 +58,6 @@ async def example_mapping():
 
         except Exception as e:
             print(f"  Error: {e}")
-
-        print()
 
 
 async def main():

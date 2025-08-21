@@ -33,7 +33,7 @@ async def example_suggestion():
         "blockchain-based genomic data sharing",
         "AI-powered drug repurposing",
         "single-cell spatial transcriptomics",
-        "metagenomic assembly with long reads"
+        "metagenomic assembly with long reads",
     ]
 
     for description in descriptions:
@@ -43,7 +43,7 @@ async def example_suggestion():
             response = await suggest_concepts_for_description(
                 description=description,
                 concept_type="Operation",  # or None for auto-detection
-                max_suggestions=3
+                max_suggestions=3,
             )
 
             if response.suggestions:
@@ -61,8 +61,6 @@ async def example_suggestion():
         except Exception as e:
             print(f"  Error: {e}")
 
-        print()
-
 
 async def main():
     """Run the examples."""
@@ -76,4 +74,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())
