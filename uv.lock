@@ -268,15 +268,7 @@ requires-dist = [
     { name = "fastmcp", specifier = ">=2.10.6" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "numpy", specifier = ">=1.24.0" },
-<<<<<<< Updated upstream
-    { name = "owlready2", specifier = ">=0.45.0" },
-<<<<<<< Updated upstream
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.7.0" },
-=======
-=======
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.7.0" },
->>>>>>> Stashed changes
->>>>>>> Stashed changes
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pydantic-settings", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
