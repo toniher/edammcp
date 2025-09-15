@@ -31,7 +31,7 @@ jobs:
         run: |
           uv sync --dev
 
-      - name: TRun pre-commit
+      - name: Run pre-commit
         id: precommit
         run: |
           uv run pre-commit run --all-files
