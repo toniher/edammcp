@@ -34,4 +34,4 @@ jobs:
       - name: Run pre-commit
         id: precommit
         run: |
-          uv run pre-commit run --all-files
+          uv run python -m pre-commit run --all-files
