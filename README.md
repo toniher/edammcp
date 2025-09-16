@@ -39,40 +39,7 @@ uv run python -m edam_mcp.main
 
 ### Example Output
 
-```python
-# Mapping a description to EDAM concepts
-from edam_mcp.tools.mapping import map_description_to_concepts
-
-response = await map_description_to_concepts(
-    description="sequence alignment tool",
-    context="bioinformatics tool",
-    max_results=3,
-    min_confidence=0.5
-)
-
-# Returns:
-# - concept_uri: "http://edamontology.org/operation_0296"
-# - concept_label: "Sequence alignment"
-# - confidence: 0.85
-# - concept_type: "Operation"
-```
-
-```python
-# Suggesting new concepts when no match is found
-from edam_mcp.tools.suggestion import suggest_concepts_for_description
-
-response = await suggest_concepts_for_description(
-    description="quantum computing for protein folding",
-    concept_type="Operation",
-    max_suggestions=3
-)
-
-# Returns suggested new concepts with:
-# - suggested_label: "Quantum Protein Folding"
-# - suggested_uri: "http://edamontology.org/operation_quantum_protein_folding"
-# - confidence: 0.75
-# - parent_concept: "http://edamontology.org/operation_0296"
-```
+For examples on how to run the functions, please check [basic-usage.md](/docs/examples/basic-usage.md).
 
 ## Features
 
