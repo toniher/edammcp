@@ -34,7 +34,7 @@ uv run python examples/simple_test.py
 uv run python examples/basic_usage.py
 
 # Start the MCP server
-uv run python -m edam_mcp.main
+uv run edam-mcp
 ```
 
 ### Example Output
