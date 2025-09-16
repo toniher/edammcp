@@ -178,7 +178,7 @@ class OntologyLoader:
 
         return matches[:max_results]
 
-    def get_concept_hierarchy(self, concept_uri: str) -> list[str]:  # currently  not used
+    def get_concept_hierarchy(self, concept_uri: str) -> list[str]:  # TODO: currently  not used
         """Get the full hierarchy path for a concept."""
         hierarchy = []
         current_uri = concept_uri
