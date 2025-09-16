@@ -4,15 +4,15 @@ from .requests import MappingRequest, SuggestionRequest
 from .responses import (
     ConceptMatch,
     MappingResponse,
-    SuggestionResponse,
     SuggestedConcept,
+    SuggestionResponse,
 )
 
 __all__ = [
     "MappingRequest",
-    "SuggestionRequest", 
+    "SuggestionRequest",
     "ConceptMatch",
     "MappingResponse",
     "SuggestionResponse",
     "SuggestedConcept",
-] 
+]

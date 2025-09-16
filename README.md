@@ -177,15 +177,9 @@ uv sync --dev
 # Run tests
 uv run pytest
 
-# Format code
-uv run black edam_mcp/
-uv run isort edam_mcp/
-
-# Type checking
-uv run mypy edam_mcp/
-
-# Linting
-uv run ruff check edam_mcp/
+# Lint & Format code
+uv run pre-commit install # Run only first time
+uv run pre-commit run --all-files
 ```
 
 ### Adding new tools
