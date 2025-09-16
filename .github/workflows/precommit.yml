@@ -29,9 +29,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install -e ".[dev]"
+          uv sync --locked --all-extras --dev
 
       - name: Run pre-commit
         id: precommit
         run: |
-          uv run python -m pre-commit run --all-files
+          uv run pre-commit run --all-files

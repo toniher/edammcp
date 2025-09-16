@@ -29,10 +29,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv pip install -e ".[dev]"
+          uv sync --locked --all-extras --dev
 
 
       - name: Test with pytest
         id: pytest
         run: |
-          uv run python -m pytest
+          uv run pytest
