@@ -53,6 +53,7 @@ def main():
     print("2. Format code: uv run black edam_mcp/")
     print("3. Start the server: uv run python -m edam_mcp.main")
     print("4. Run examples: uv run python examples/basic_usage_mapper.py")
+    print("5. Run examples: uv run python examples/basic_usage_suggester.py")
 
 
 if __name__ == "__main__":
