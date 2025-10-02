@@ -31,7 +31,12 @@ uv pip install -e .
 uv run python examples/simple_test.py
 
 # Run the full example (downloads ML models on first run)
-uv run python examples/basic_usage.py
+
+# Run the mapper
+uv run python examples/basic_usage_mapper.py
+
+# Run the suggester
+uv run python examples/basic_usage_suggester.py
 
 # Start the MCP server
 uv run edam-mcp
