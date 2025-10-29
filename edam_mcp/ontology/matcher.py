@@ -25,7 +25,7 @@ class ConceptMatcher:
         self.embedding_model = None
         self.concept_embeddings: dict[str, np.ndarray] = {}
         self.use_chromadb = False or settings.use_chromadb
-
+        self.chroma_db = settings.cache_dir + "/default.db"
         # Don't build embeddings immediately - do it lazily when needed
 
     def _build_embeddings(self) -> None:
@@ -46,7 +46,7 @@ class ConceptMatcher:
             except ImportError:
                 logger.error("chromadb not available. Install with: pip install chromadb")
                 return
-            client = chromadb.PersistentClient(path="default.db")
+            client = chromadb.PersistentClient(path=self.chroma_db)
             collection = client.get_or_create_collection(name="concept_embeddings")
             logger.info("Building concept embeddings and storing in ChromaDB...")
         else:
@@ -172,7 +172,8 @@ class ConceptMatcher:
             except ImportError:
                 logger.error("chromadb not available. Install with: pip install chromadb")
                 return []
-            client = chromadb.PersistentClient(path="default.db")
+
+            client = chromadb.PersistentClient(path=self.chroma_db)
             collection = client.get_or_create_collection(name="concept_embeddings")
             # Use ChromaDB's default query for similarity search
             query_results = collection.query(
