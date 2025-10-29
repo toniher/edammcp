@@ -31,10 +31,12 @@ def create_server() -> FastMCP:
 
     # Register tools using decorators
     @mcp.tool
+    # TODO: Fix MCP access from here
     async def map_to_edam_concept_tool(request: MappingRequest, context: Context) -> MappingResponse:
         return await map_to_edam_concept(request, context)
 
     @mcp.tool
+    # TODO: Fix MCP access from here
     async def suggest_new_concept_tool(request: SuggestionRequest, context: Context) -> SuggestionResponse:
         return await suggest_new_concept(request, context)
 
