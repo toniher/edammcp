@@ -24,7 +24,8 @@ class ConceptMatcher:
         self.ontology_loader = ontology_loader
         self.embedding_model = None
         self.concept_embeddings: dict[str, np.ndarray] = {}
-        self.use_chromadb = True
+        self.use_chromadb = False or settings.use_chromadb
+
         # Don't build embeddings immediately - do it lazily when needed
 
     def _build_embeddings(self) -> None:
@@ -39,8 +40,7 @@ class ConceptMatcher:
         if self.embedding_model is None:
             self.embedding_model = SentenceTransformer(settings.embedding_model)
 
-        use_chromadb = getattr(self, "use_chromadb", False)
-        if use_chromadb:
+        if self.use_chromadb:
             try:
                 import chromadb
             except ImportError:
@@ -53,7 +53,7 @@ class ConceptMatcher:
             logger.info("Building concept embeddings and storing in memory...")
 
         for uri, concept in self.ontology_loader.concepts.items():
-            if use_chromadb:
+            if self.use_chromadb:
                 existing = collection.get(ids=[uri])
                 # ChromaDB returns empty dict if not found
                 if existing and existing.get("ids"):
@@ -75,7 +75,7 @@ class ConceptMatcher:
             # Generate embedding
             embedding = self.embedding_model.encode(processed_text, show_progress_bar=False)
 
-            if use_chromadb:
+            if self.use_chromadb:
                 collection.add(
                     ids=[uri],
                     embeddings=[embedding.tolist()],
@@ -95,7 +95,7 @@ class ConceptMatcher:
             else:
                 self.concept_embeddings[uri] = embedding
 
-        if use_chromadb:
+        if self.use_chromadb:
             logger.info(f"Stored embeddings for {len(self.ontology_loader.concepts)} concepts in ChromaDB")
         else:
             logger.info(f"Built embeddings for {len(self.concept_embeddings)} concepts")
@@ -164,10 +164,9 @@ class ConceptMatcher:
         Returns:
             List of (concept_uri, similarity) tuples.
         """
-        use_chromadb = getattr(self, "use_chromadb", False)
         similarities = []
 
-        if use_chromadb:
+        if self.use_chromadb:
             try:
                 import chromadb
             except ImportError:

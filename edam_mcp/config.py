@@ -37,6 +37,8 @@ class Settings(BaseSettings):
 
     model_config = {"env_prefix": "EDAM_", "case_sensitive": False}
 
+    use_chromadb: bool = Field(default=False, description="Use persistent chromadb to speed up the query process")
+
 
 # Global settings instance
 settings = Settings()
