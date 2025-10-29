@@ -1,6 +1,9 @@
 """EDAM ontology loading and parsing functionality."""
 
 import logging
+import os
+import pickle
+import time
 
 from rdflib import RDF, Graph, Namespace, URIRef
 from rdflib.namespace import OWL, RDFS, SKOS
@@ -27,7 +30,7 @@ class OntologyLoader:
         self.graph: Graph | None = None
         self.concepts: dict[str, dict] = {}
         self.concept_types: set[str] = set()
-        self.cache_dir = "./cache"
+        self.cache_dir = settings.cache_dir
         self.cache_ttl = settings.cache_ttl
 
     def _cache_paths(self):

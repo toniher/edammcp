@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     )
 
     # Cache Configuration
+    cache_dir: str = Field(default="./.cache", description="Directory to store cached ontology data")
     cache_ttl: int = Field(default=3600, description="Cache TTL in seconds for ontology data")
 
     # Logging Configuration
