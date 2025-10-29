@@ -24,10 +24,12 @@ class ConceptMatcher:
         self.ontology_loader = ontology_loader
         self.embedding_model = None
         self.concept_embeddings: dict[str, np.ndarray] = {}
+        self.use_chromadb = False or settings.use_chromadb
+
         # Don't build embeddings immediately - do it lazily when needed
 
     def _build_embeddings(self) -> None:
-        """Build embeddings for all concepts in the ontology."""
+        """Build embeddings for all concepts in the ontology and store them in ChromaDB or in-memory."""
         # Lazy import of sentence_transformers
         try:
             from sentence_transformers import SentenceTransformer
@@ -38,9 +40,26 @@ class ConceptMatcher:
         if self.embedding_model is None:
             self.embedding_model = SentenceTransformer(settings.embedding_model)
 
-        logger.info("Building concept embeddings...")
+        if self.use_chromadb:
+            try:
+                import chromadb
+            except ImportError:
+                logger.error("chromadb not available. Install with: pip install chromadb")
+                return
+            client = chromadb.PersistentClient(path="default.db")
+            collection = client.get_or_create_collection(name="concept_embeddings")
+            logger.info("Building concept embeddings and storing in ChromaDB...")
+        else:
+            logger.info("Building concept embeddings and storing in memory...")
 
         for uri, concept in self.ontology_loader.concepts.items():
+            if self.use_chromadb:
+                existing = collection.get(ids=[uri])
+                # ChromaDB returns empty dict if not found
+                if existing and existing.get("ids"):
+                    logger.debug(f"Embedding for {uri} already exists in ChromaDB, skipping.")
+                    continue
+
             # Create text representation for embedding
             text_parts = [concept["label"]]
 
@@ -55,9 +74,31 @@ class ConceptMatcher:
 
             # Generate embedding
             embedding = self.embedding_model.encode(processed_text, show_progress_bar=False)
-            self.concept_embeddings[uri] = embedding
 
-        logger.info(f"Built embeddings for {len(self.concept_embeddings)} concepts")
+            if self.use_chromadb:
+                collection.add(
+                    ids=[uri],
+                    embeddings=[embedding.tolist()],
+                    documents=[processed_text],
+                    metadatas=[
+                        {
+                            "label": concept["label"],
+                            "definition": concept.get("definition"),
+                            "synonyms": (
+                                ", ".join(concept["synonyms"])
+                                if isinstance(concept.get("synonyms"), list)
+                                else concept.get("synonyms")
+                            ),
+                        }
+                    ],
+                )
+            else:
+                self.concept_embeddings[uri] = embedding
+
+        if self.use_chromadb:
+            logger.info(f"Stored embeddings for {len(self.ontology_loader.concepts)} concepts in ChromaDB")
+        else:
+            logger.info(f"Built embeddings for {len(self.concept_embeddings)} concepts")
 
     def match_concepts(
         self,
@@ -125,12 +166,27 @@ class ConceptMatcher:
         """
         similarities = []
 
-        for uri, concept_embedding in self.concept_embeddings.items():
-            # Calculate cosine similarity
-            similarity = self._cosine_similarity(description_embedding, concept_embedding)
-            similarities.append((uri, similarity))
+        if self.use_chromadb:
+            try:
+                import chromadb
+            except ImportError:
+                logger.error("chromadb not available. Install with: pip install chromadb")
+                return []
+            client = chromadb.PersistentClient(path="default.db")
+            collection = client.get_or_create_collection(name="concept_embeddings")
+            # Use ChromaDB's default query for similarity search
+            query_results = collection.query(
+                query_embeddings=[description_embedding],
+                n_results=10,  # You can adjust this number as needed
+            )
+            ids = query_results.get("ids", [[]])[0]
+            distances = query_results.get("distances", [[]])[0]
+            similarities = list(zip(ids, distances))
+        else:
+            for uri, concept_embedding in self.concept_embeddings.items():
+                similarity = self._cosine_similarity(description_embedding, concept_embedding)
+                similarities.append((uri, similarity))
 
-        # Sort by similarity (descending)
         similarities.sort(key=lambda x: x[1], reverse=True)
         return similarities
 
