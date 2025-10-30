@@ -114,6 +114,30 @@ The server exposes two main tools:
 }
 ```
 
+Alternately, if you plan to develop the code and test it from you MCP client at the same time:
+
+```bash
+# Install in Claude Desktop or other compatible MCP clients
+# Add to your MCP configuration file:
+
+{
+  "mcpServers": {
+    "edam-mcp": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/path/to/repo/edam_mcp",
+        "run",
+        "edam-mcp"
+      ],
+      "env": {
+        "EDAM_SIMILARITY_THRESHOLD": "0.7"
+      }
+    }
+  }
+}
+```
+
 ## Project Structure
 
 ```
