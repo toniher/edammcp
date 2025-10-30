@@ -126,7 +126,7 @@ Alternately, if you plan to develop the code and test it from you MCP client at 
       "command": "uv",
       "args": [
         "--directory",
-        "/path/to/repo/edam_mcp",
+        "/path/to/repo/edammcp",
         "run",
         "edam-mcp"
       ],
