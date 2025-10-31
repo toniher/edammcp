@@ -114,7 +114,7 @@ The server exposes two main tools:
 }
 ```
 
-Alternately, if you plan to develop the code and test it from you MCP client at the same time:
+Alternately, if you plan to develop the code and test it from your MCP client at the same time:
 
 ```bash
 # Install in Claude Desktop or other compatible MCP clients
