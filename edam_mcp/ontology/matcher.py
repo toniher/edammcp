@@ -1,6 +1,7 @@
 """Concept matching functionality for mapping descriptions to EDAM concepts."""
 
 import logging
+import os
 
 import numpy as np
 
@@ -25,7 +26,7 @@ class ConceptMatcher:
         self.embedding_model = None
         self.concept_embeddings: dict[str, np.ndarray] = {}
         self.use_chromadb = settings.use_chromadb
-        self.chroma_db = settings.cache_dir + "/default.db"
+        self.chroma_db = os.path.join(settings.cache_dir, "default.db")
         # Don't build embeddings immediately - do it lazily when needed
 
     def _build_embeddings(self) -> None:
