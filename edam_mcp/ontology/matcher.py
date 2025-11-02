@@ -24,7 +24,7 @@ class ConceptMatcher:
         self.ontology_loader = ontology_loader
         self.embedding_model = None
         self.concept_embeddings: dict[str, np.ndarray] = {}
-        self.use_chromadb = False or settings.use_chromadb
+        self.use_chromadb = settings.use_chromadb
         self.chroma_db = settings.cache_dir + "/default.db"
         # Don't build embeddings immediately - do it lazily when needed
 
