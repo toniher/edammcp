@@ -73,8 +73,11 @@ class OntologyLoader:
         try:
             if self._is_cache_fresh():
                 logger.info("Loading concepts from cache")
-                self._load_cache()
-                return True
+                try:
+                    self._load_cache()
+                    return True
+                except Exception as cache_exc:
+                    logger.warning(f"Failed to load cache: {cache_exc}. Falling back to loading from ontology URL.")
 
             logger.info(f"Loading EDAM ontology from {self.ontology_url}")
 
