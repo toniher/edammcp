@@ -11,8 +11,6 @@ from ..models.responses import SuggestionResponse
 from ..ontology import ConceptMatcher, ConceptSuggester, OntologyLoader
 from .mapping import map_to_edam_concept
 
-logger = logging.getLogger(__name__)
-
 
 async def suggest_new_concept(request: SuggestionRequest, context: Context) -> SuggestionResponse:
     """Suggest new EDAM concepts when no suitable existing concept is found.
@@ -31,7 +29,7 @@ async def suggest_new_concept(request: SuggestionRequest, context: Context) -> S
     """
     try:
         # Log the request
-        logger.info(f"Suggesting concepts for: {request.description[:100]}...")
+        context.info(f"Suggesting concepts for: {request.description[:100]}...")
 
         # Initialize ontology components
         ontology_loader = OntologyLoader()
@@ -42,7 +40,7 @@ async def suggest_new_concept(request: SuggestionRequest, context: Context) -> S
         concept_suggester = ConceptSuggester(ontology_loader, concept_matcher)
 
         # First attempt to map to existing concepts
-        logger.info("Attempting to map to existing concepts...")
+        context.info("Attempting to map to existing concepts...")
         mapping_response = await map_to_edam_concept(
             MappingRequest(
                 description=request.description,
@@ -55,7 +53,7 @@ async def suggest_new_concept(request: SuggestionRequest, context: Context) -> S
 
         # Check if we found good matches
         if mapping_response.matches and mapping_response.matches[0].confidence >= 0.8:
-            logger.info("Found high-confidence existing concept matches")
+            context.info("Found high-confidence existing concept matches")
             return SuggestionResponse(
                 suggestions=[],
                 total_suggestions=0,
@@ -64,7 +62,7 @@ async def suggest_new_concept(request: SuggestionRequest, context: Context) -> S
             )
 
         # Generate suggestions for new concepts
-        logger.info("Generating suggestions for new concepts...")
+        context.info("Generating suggestions for new concepts...")
         suggestions = concept_suggester.suggest_concepts(
             description=request.description,
             concept_type=request.concept_type,
@@ -73,7 +71,7 @@ async def suggest_new_concept(request: SuggestionRequest, context: Context) -> S
             max_suggestions=settings.max_suggestions,
         )
 
-        logger.info(f"Generated {len(suggestions)} concept suggestions")
+        context.info(f"Generated {len(suggestions)} concept suggestions")
 
         return SuggestionResponse(
             suggestions=suggestions,
@@ -83,7 +81,7 @@ async def suggest_new_concept(request: SuggestionRequest, context: Context) -> S
         )
 
     except Exception as e:
-        logger.error(f"Error in concept suggestion: {e}")
+        context.error(f"Error in concept suggestion: {e}")
         raise
 
 
@@ -115,9 +113,21 @@ async def suggest_concepts_for_description(
     )
 
     # Create a mock context for standalone use
-    class MockContext:
+    class MockContext(Context):
         def __init__(self):
             self.log = logging.getLogger(__name__)
+
+        def info(self, msg):
+            self.log.info(msg)
+
+        def warning(self, msg):
+            self.log.warning(msg)
+
+        def debug(self, msg):
+            self.log.debug(msg)
+
+        def error(self, msg):
+            self.log.error(msg)
 
     mock_context = MockContext()
 
