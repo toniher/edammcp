@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     )
 
     # Matching Configuration
+    # TODO: This is not being used
     similarity_threshold: float = Field(
         default=0.7,
         ge=0.0,
