@@ -133,7 +133,7 @@ class ConceptMatcher:
         description_embedding = self.embedding_model.encode(processed_description, show_progress_bar=False)
 
         # Calculate similarities
-        similarities = self._calculate_similarities(description_embedding)
+        similarities = self._calculate_similarities(description_embedding, max_results * 2)
 
         # Filter and sort results
         matches = []
@@ -155,7 +155,7 @@ class ConceptMatcher:
         matches.sort(key=lambda x: x.confidence, reverse=True)
         return matches[:max_results]
 
-    def _calculate_similarities(self, description_embedding: np.ndarray) -> list[tuple[str, float]]:
+    def _calculate_similarities(self, description_embedding: np.ndarray, max_results: int) -> list[tuple[str, float]]:
         """Calculate cosine similarities between description and all concepts.
 
         Args:
@@ -178,7 +178,7 @@ class ConceptMatcher:
             # Use ChromaDB's default query for similarity search
             query_results = collection.query(
                 query_embeddings=[description_embedding],
-                n_results=10,  # You can adjust this number as needed
+                n_results=max_results,
             )
             ids = query_results.get("ids", [[]])[0]
             distances = query_results.get("distances", [[]])[0]
