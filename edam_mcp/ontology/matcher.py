@@ -182,7 +182,9 @@ class ConceptMatcher:
             )
             ids = query_results.get("ids", [[]])[0]
             distances = query_results.get("distances", [[]])[0]
-            similarities = list(zip(ids, distances))
+            # Convert distances to similarity scores (assuming distances are normalized between 0 and 1)
+            similarity_scores = [1.0 - d for d in distances]
+            similarities = list(zip(ids, similarity_scores))
         else:
             for uri, concept_embedding in self.concept_embeddings.items():
                 similarity = self._cosine_similarity(description_embedding, concept_embedding)
