@@ -1,12 +1,11 @@
 """MCP tool for mapping descriptions to EDAM concepts."""
 
-import logging
-
 from fastmcp.server import Context
 
 from ..models.requests import MappingRequest
 from ..models.responses import MappingResponse
 from ..ontology import ConceptMatcher, OntologyLoader
+from ..utils.context import MockContext
 
 
 async def map_to_edam_concept(request: MappingRequest, context: Context) -> MappingResponse:
@@ -93,23 +92,6 @@ async def map_description_to_concepts(
         max_results=max_results,
         min_confidence=min_confidence,
     )
-
-    # Create a mock context for standalone use
-    class MockContext(Context):
-        def __init__(self):
-            self.log = logging.getLogger(__name__)
-
-        def info(self, msg):
-            self.log.info(msg)
-
-        def warning(self, msg):
-            self.log.warning(msg)
-
-        def debug(self, msg):
-            self.log.debug(msg)
-
-        def error(self, msg):
-            self.log.error(msg)
 
     mock_context = MockContext()
 
