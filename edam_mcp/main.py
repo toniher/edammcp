@@ -34,25 +34,25 @@ def create_server() -> FastMCP:
     @mcp.tool
     async def map_to_edam_concept_tool(
         description: str,
-        context: str | None = None,
-        max_results: str | None = "5",
-        min_confidence: str | None = "0.5",
+        context: str = None,
+        max_results: int = 5,
+        min_confidence: float = 0.5,
         tool_context: Context = None,
     ) -> MappingResponse:
         request = MappingRequest(
             description=description,
             context=context,
-            max_results=int(max_results),
-            min_confidence=float(min_confidence),
+            max_results=max_results,
+            min_confidence=min_confidence,
         )
         return await map_to_edam_concept(request, tool_context)
 
     @mcp.tool
     async def suggest_new_concept_tool(
         description: str,
-        concept_type: str | None = None,
-        parent_concept: str | None = None,
-        rationale: str | None = None,
+        concept_type: str = None,
+        parent_concept: str = None,
+        rationale: str = None,
         tool_context: Context = None,
     ) -> SuggestionResponse:
         request = SuggestionRequest(
