@@ -5,6 +5,8 @@ An MCP (Model Context Protocol) server for EDAM ontology mapping and concept sug
 1. **Map descriptions to EDAM concepts**: Given metadata or free text descriptions, find the most appropriate EDAM ontology concepts with confidence scores
 2. **Suggest new concepts**: When no suitable concept exists, suggest new concepts that could be integrated into the EDAM ontology
 
+Documentation [here](https://edamontology.github.io/edammcp/).
+
 ## 🚀 Quick Start
 
 ### Installation
@@ -29,48 +31,20 @@ uv pip install -e .
 uv run python examples/simple_test.py
 
 # Run the full example (downloads ML models on first run)
-uv run python examples/basic_usage.py
+
+# Run the mapper
+uv run python examples/basic_usage_mapper.py
+
+# Run the suggester
+uv run python examples/basic_usage_suggester.py
 
 # Start the MCP server
-uv run python -m edam_mcp.main
+uv run edam-mcp
 ```
 
 ### Example Output
 
-```python
-# Mapping a description to EDAM concepts
-from edam_mcp.tools.mapping import map_description_to_concepts
-
-response = await map_description_to_concepts(
-    description="sequence alignment tool",
-    context="bioinformatics tool",
-    max_results=3,
-    min_confidence=0.5
-)
-
-# Returns:
-# - concept_uri: "http://edamontology.org/operation_0296"
-# - concept_label: "Sequence alignment"
-# - confidence: 0.85
-# - concept_type: "Operation"
-```
-
-```python
-# Suggesting new concepts when no match is found
-from edam_mcp.tools.suggestion import suggest_concepts_for_description
-
-response = await suggest_concepts_for_description(
-    description="quantum computing for protein folding",
-    concept_type="Operation",
-    max_suggestions=3
-)
-
-# Returns suggested new concepts with:
-# - suggested_label: "Quantum Protein Folding"
-# - suggested_uri: "http://edamontology.org/operation_quantum_protein_folding"
-# - confidence: 0.75
-# - parent_concept: "http://edamontology.org/operation_0296"
-```
+For examples on how to run the functions, please check [basic-usage.md](/docs/examples/basic-usage.md).
 
 ## Features
 
@@ -177,15 +151,9 @@ uv sync --dev
 # Run tests
 uv run pytest
 
-# Format code
-uv run black edam_mcp/
-uv run isort edam_mcp/
-
-# Type checking
-uv run mypy edam_mcp/
-
-# Linting
-uv run ruff check edam_mcp/
+# Lint & Format code
+uv run pre-commit install # Run only first time
+uv run pre-commit run --all-files
 ```
 
 ### Adding new tools

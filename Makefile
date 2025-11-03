@@ -22,9 +22,8 @@ test-verbose: ## Run tests with verbose output
 test-coverage: ## Run tests with coverage
 	uv run pytest --cov=edam_mcp --cov-report=html
 
-format: ## Format code with black and isort
-	uv run black edam_mcp/ tests/ examples/
-	uv run isort edam_mcp/ tests/ examples/
+format: ## Format code with ruff
+	uv run ruff format edam_mcp/ tests/ examples/
 
 lint: ## Run linting with ruff
 	uv run ruff check edam_mcp/ tests/ examples/
@@ -44,8 +43,9 @@ check-all: ## Run all checks (format, lint, type-check, test)
 run: ## Run the MCP server
 	uv run python -m edam_mcp.main
 
-example: ## Run the basic usage example
-	uv run python examples/basic_usage.py
+example: ## Run the basic usage examples for the mapper and the suggester functions
+	uv run python examples/basic_usage_mapper.py
+	uv run python examples/basic_usage_suggester.py
 
 docs-build: ## Build documentation
 	uv run mkdocs build
