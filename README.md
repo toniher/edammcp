@@ -13,7 +13,7 @@ Documentation [here](https://edamontology.github.io/edammcp/).
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone git@github.com:edamontology/edammcp.git
 cd edammcp
 
 # Install with uv (recommended)
