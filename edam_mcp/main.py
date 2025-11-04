@@ -30,38 +30,13 @@ def create_server() -> FastMCP:
     mcp = FastMCP("edam-mcp")
 
     # Register tools using decorators
-    # TODO: Check whether context is actually needed
     @mcp.tool
-    async def map_to_edam_concept_tool(
-        description: str,
-        context: str = None,
-        max_results: int = 5,
-        min_confidence: float = 0.5,
-        tool_context: Context = None,
-    ) -> MappingResponse:
-        request = MappingRequest(
-            description=description,
-            context=context,
-            max_results=max_results,
-            min_confidence=min_confidence,
-        )
-        return await map_to_edam_concept(request, tool_context)
+    async def map_to_edam_concept_tool(request: MappingRequest, context: Context) -> MappingResponse:
+        return await map_to_edam_concept(request, context)
 
     @mcp.tool
-    async def suggest_new_concept_tool(
-        description: str,
-        concept_type: str = None,
-        parent_concept: str = None,
-        rationale: str = None,
-        tool_context: Context = None,
-    ) -> SuggestionResponse:
-        request = SuggestionRequest(
-            description=description,
-            concept_type=concept_type,
-            parent_concept=parent_concept,
-            rationale=rationale,
-        )
-        return await suggest_new_concept(request, tool_context)
+    async def suggest_new_concept_tool(request: SuggestionRequest, context: Context) -> SuggestionResponse:
+        return await suggest_new_concept(request, context)
 
     return mcp
 
