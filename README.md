@@ -99,13 +99,37 @@ The server exposes two main tools:
 ### MCP Client Integration
 
 ```bash
-# Install in Claude Desktop
+# Install in Claude Desktop or other compatible MCP clients
 # Add to your MCP configuration file:
 {
   "mcpServers": {
     "edam-mcp": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/edamontology/edammcp", "edam-mcp"],
+      "env": {
+        "EDAM_SIMILARITY_THRESHOLD": "0.7"
+      }
+    }
+  }
+}
+```
+
+Alternately, if you plan to develop the code and test it from your MCP client at the same time:
+
+```bash
+# Install in Claude Desktop or other compatible MCP clients
+# Add to your MCP configuration file:
+
+{
+  "mcpServers": {
+    "edam-mcp": {
       "command": "uv",
-      "args": ["run", "python", "-m", "edam_mcp.main"],
+      "args": [
+        "--directory",
+        "/path/to/repo/edammcp",
+        "run",
+        "edam-mcp"
+      ],
       "env": {
         "EDAM_SIMILARITY_THRESHOLD": "0.7"
       }
@@ -168,8 +192,8 @@ uv run pre-commit run --all-files
 The server can be configured through environment variables:
 
 - `EDAM_ONTOLOGY_URL`: URL to the EDAM ontology file (default: official EDAM OWL file)
-- `SIMILARITY_THRESHOLD`: Minimum confidence threshold for mappings (default: 0.7)
-- `MAX_SUGGESTIONS`: Maximum number of suggestions to return (default: 5)
+- `EDAM_SIMILARITY_THRESHOLD`: Minimum confidence threshold for mappings (default: 0.7)
+- `EDAM_MAX_SUGGESTIONS`: Maximum number of suggestions to return (default: 5)
 
 ## License
 

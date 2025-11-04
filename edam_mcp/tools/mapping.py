@@ -1,14 +1,11 @@
 """MCP tool for mapping descriptions to EDAM concepts."""
 
-import logging
-
 from fastmcp.server import Context
 
 from ..models.requests import MappingRequest
 from ..models.responses import MappingResponse
 from ..ontology import ConceptMatcher, OntologyLoader
-
-logger = logging.getLogger(__name__)
+from ..utils.context import MockContext
 
 
 async def map_to_edam_concept(request: MappingRequest, context: Context) -> MappingResponse:
@@ -27,7 +24,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
     """
     try:
         # Log the request
-        context.log.info(f"Mapping description: {request.description[:100]}...")
+        context.info(f"Mapping description: {request.description[:100]}...")
 
         # Initialize ontology components
         ontology_loader = OntologyLoader()
@@ -40,7 +37,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
         exact_matches = concept_matcher.find_exact_matches(request.description)
 
         if exact_matches:
-            context.log.info(f"Found {len(exact_matches)} exact matches")
+            context.info(f"Found {len(exact_matches)} exact matches")
             return MappingResponse(
                 matches=exact_matches,
                 total_matches=len(exact_matches),
@@ -49,7 +46,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
             )
 
         # Perform semantic matching
-        context.log.info("Performing semantic matching...")
+        context.info("Performing semantic matching...")
         matches = concept_matcher.match_concepts(
             description=request.description,
             context=request.context,
@@ -57,7 +54,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
             min_confidence=request.min_confidence,
         )
 
-        context.log.info(f"Found {len(matches)} semantic matches")
+        context.info(f"Found {len(matches)} semantic matches")
 
         return MappingResponse(
             matches=matches,
@@ -67,7 +64,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
         )
 
     except Exception as e:
-        context.log.error(f"Error in concept mapping: {e}")
+        context.error(f"Error in concept mapping: {e}")
         raise
 
 
@@ -95,11 +92,6 @@ async def map_description_to_concepts(
         max_results=max_results,
         min_confidence=min_confidence,
     )
-
-    # Create a mock context for standalone use
-    class MockContext:
-        def __init__(self):
-            self.log = logging.getLogger(__name__)
 
     mock_context = MockContext()
 
