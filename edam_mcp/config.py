@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     )
 
     # Matching Configuration
+    # TODO: This is not being used
     similarity_threshold: float = Field(
         default=0.7,
         ge=0.0,
@@ -30,12 +31,15 @@ class Settings(BaseSettings):
     )
 
     # Cache Configuration
+    cache_dir: str = Field(default="./.cache", description="Directory to store cached ontology data")
     cache_ttl: int = Field(default=3600, description="Cache TTL in seconds for ontology data")
 
     # Logging Configuration
     log_level: str = Field(default="INFO", description="Logging level")
 
     model_config = {"env_prefix": "EDAM_", "case_sensitive": False}
+
+    use_chromadb: bool = Field(default=False, description="Use persistent chromadb to speed up the query process")
 
 
 # Global settings instance

@@ -1,6 +1,7 @@
 """Concept matching functionality for mapping descriptions to EDAM concepts."""
 
 import logging
+import os
 
 import numpy as np
 
@@ -24,10 +25,12 @@ class ConceptMatcher:
         self.ontology_loader = ontology_loader
         self.embedding_model = None
         self.concept_embeddings: dict[str, np.ndarray] = {}
+        self.use_chromadb = settings.use_chromadb
+        self.chroma_db = os.path.join(settings.cache_dir, "default.db")
         # Don't build embeddings immediately - do it lazily when needed
 
     def _build_embeddings(self) -> None:
-        """Build embeddings for all concepts in the ontology."""
+        """Build embeddings for all concepts in the ontology and store them in ChromaDB or in-memory."""
         # Lazy import of sentence_transformers
         try:
             from sentence_transformers import SentenceTransformer
@@ -38,9 +41,26 @@ class ConceptMatcher:
         if self.embedding_model is None:
             self.embedding_model = SentenceTransformer(settings.embedding_model)
 
-        logger.info("Building concept embeddings...")
+        if self.use_chromadb:
+            try:
+                import chromadb
+            except ImportError:
+                logger.error("chromadb not available. Install with: pip install chromadb")
+                return
+            client = chromadb.PersistentClient(path=self.chroma_db)
+            collection = client.get_or_create_collection(name="concept_embeddings")
+            logger.info("Building concept embeddings and storing in ChromaDB...")
+        else:
+            logger.info("Building concept embeddings and storing in memory...")
 
         for uri, concept in self.ontology_loader.concepts.items():
+            if self.use_chromadb:
+                existing = collection.get(ids=[uri])
+                # ChromaDB returns empty dict if not found
+                if existing and existing.get("ids"):
+                    logger.debug(f"Embedding for {uri} already exists in ChromaDB, skipping.")
+                    continue
+
             # Create text representation for embedding
             text_parts = [concept["label"]]
 
@@ -55,9 +75,31 @@ class ConceptMatcher:
 
             # Generate embedding
             embedding = self.embedding_model.encode(processed_text, show_progress_bar=False)
-            self.concept_embeddings[uri] = embedding
 
-        logger.info(f"Built embeddings for {len(self.concept_embeddings)} concepts")
+            if self.use_chromadb:
+                collection.add(
+                    ids=[uri],
+                    embeddings=[embedding.tolist()],
+                    documents=[processed_text],
+                    metadatas=[
+                        {
+                            "label": concept["label"],
+                            "definition": concept.get("definition"),
+                            "synonyms": (
+                                ", ".join(concept["synonyms"])
+                                if isinstance(concept.get("synonyms"), list)
+                                else concept.get("synonyms")
+                            ),
+                        }
+                    ],
+                )
+            else:
+                self.concept_embeddings[uri] = embedding
+
+        if self.use_chromadb:
+            logger.info(f"Stored embeddings for {len(self.ontology_loader.concepts)} concepts in ChromaDB")
+        else:
+            logger.info(f"Built embeddings for {len(self.concept_embeddings)} concepts")
 
     def match_concepts(
         self,
@@ -92,7 +134,7 @@ class ConceptMatcher:
         description_embedding = self.embedding_model.encode(processed_description, show_progress_bar=False)
 
         # Calculate similarities
-        similarities = self._calculate_similarities(description_embedding)
+        similarities = self._calculate_similarities(description_embedding, max_results * 2)
 
         # Filter and sort results
         matches = []
@@ -114,7 +156,7 @@ class ConceptMatcher:
         matches.sort(key=lambda x: x.confidence, reverse=True)
         return matches[:max_results]
 
-    def _calculate_similarities(self, description_embedding: np.ndarray) -> list[tuple[str, float]]:
+    def _calculate_similarities(self, description_embedding: np.ndarray, max_results: int) -> list[tuple[str, float]]:
         """Calculate cosine similarities between description and all concepts.
 
         Args:
@@ -125,12 +167,30 @@ class ConceptMatcher:
         """
         similarities = []
 
-        for uri, concept_embedding in self.concept_embeddings.items():
-            # Calculate cosine similarity
-            similarity = self._cosine_similarity(description_embedding, concept_embedding)
-            similarities.append((uri, similarity))
+        if self.use_chromadb:
+            try:
+                import chromadb
+            except ImportError:
+                logger.error("chromadb not available. Install with: pip install chromadb")
+                return []
 
-        # Sort by similarity (descending)
+            client = chromadb.PersistentClient(path=self.chroma_db)
+            collection = client.get_or_create_collection(name="concept_embeddings")
+            # Use ChromaDB's default query for similarity search
+            query_results = collection.query(
+                query_embeddings=[description_embedding],
+                n_results=max_results,
+            )
+            ids = query_results.get("ids", [[]])[0]
+            distances = query_results.get("distances", [[]])[0]
+            # Convert distances to similarity scores (assuming distances are normalized between 0 and 1)
+            similarity_scores = [1.0 - d for d in distances]
+            similarities = list(zip(ids, similarity_scores))
+        else:
+            for uri, concept_embedding in self.concept_embeddings.items():
+                similarity = self._cosine_similarity(description_embedding, concept_embedding)
+                similarities.append((uri, similarity))
+
         similarities.sort(key=lambda x: x[1], reverse=True)
         return similarities
 

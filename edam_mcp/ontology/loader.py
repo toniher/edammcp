@@ -1,6 +1,9 @@
 """EDAM ontology loading and parsing functionality."""
 
 import logging
+import os
+import pickle
+import time
 
 from rdflib import RDF, Graph, Namespace, URIRef
 from rdflib.namespace import OWL, RDFS, SKOS
@@ -27,6 +30,39 @@ class OntologyLoader:
         self.graph: Graph | None = None
         self.concepts: dict[str, dict] = {}
         self.concept_types: set[str] = set()
+        self.cache_dir = settings.cache_dir
+        self.cache_ttl = settings.cache_ttl
+
+    def _cache_paths(self):
+        os.makedirs(self.cache_dir, exist_ok=True)
+        return (
+            os.path.join(self.cache_dir, "concepts.pkl"),
+            os.path.join(self.cache_dir, "concept_types.pkl"),
+            os.path.join(self.cache_dir, "cache.timestamp"),
+        )
+
+    def _is_cache_fresh(self):
+        _, _, ts_path = self._cache_paths()
+        if not os.path.exists(ts_path):
+            return False
+        cache_time = os.path.getmtime(ts_path)
+        return (time.time() - cache_time) < self.cache_ttl
+
+    def _load_cache(self):
+        concepts_path, types_path, _ = self._cache_paths()
+        with open(concepts_path, "rb") as f:
+            self.concepts = pickle.load(f)
+        with open(types_path, "rb") as f:
+            self.concept_types = pickle.load(f)
+
+    def _save_cache(self):
+        concepts_path, types_path, ts_path = self._cache_paths()
+        with open(concepts_path, "wb") as f:
+            pickle.dump(self.concepts, f)
+        with open(types_path, "wb") as f:
+            pickle.dump(self.concept_types, f)
+        with open(ts_path, "w") as f:
+            f.write(str(time.time()))
 
     def load_ontology(self) -> bool:
         """Load the EDAM ontology from the configured URL.
@@ -35,6 +71,14 @@ class OntologyLoader:
             True if loading was successful, False otherwise.
         """
         try:
+            if self._is_cache_fresh():
+                logger.info("Loading concepts from cache")
+                try:
+                    self._load_cache()
+                    return True
+                except Exception as cache_exc:
+                    logger.warning(f"Failed to load cache: {cache_exc}. Falling back to loading from ontology URL.")
+
             logger.info(f"Loading EDAM ontology from {self.ontology_url}")
 
             # Parse RDF/OWL content
@@ -49,6 +93,8 @@ class OntologyLoader:
             self._extract_concepts()
 
             logger.info(f"Successfully loaded {len(self.concepts)} concepts")
+
+            self._save_cache()
             return True
 
         except Exception as e:
