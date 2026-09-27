@@ -1,6 +1,17 @@
 """Models for EDAM concept mapping functionality."""
 
+from enum import StrEnum
+
 from pydantic import BaseModel, Field
+
+
+class EDAMConceptType(StrEnum):
+    """EDAM concept types (branches), as assigned by the ontology loader."""
+
+    TOPIC = "Topic"
+    OPERATION = "Operation"
+    DATA = "Data"
+    FORMAT = "Format"
 
 
 class MappingRequest(BaseModel):
@@ -22,6 +33,10 @@ class MappingRequest(BaseModel):
     max_results: int | None = Field(5, ge=1, le=20, description="Maximum number of concept matches to return")
 
     min_confidence: float | None = Field(0.5, ge=0.0, le=1.0, description="Minimum confidence threshold for matches")
+
+    concept_type: EDAMConceptType | None = Field(
+        None, description="Restrict matches to one EDAM branch (e.g. Operation); omit to search all concepts"
+    )
 
 
 class ConceptMatch(BaseModel):

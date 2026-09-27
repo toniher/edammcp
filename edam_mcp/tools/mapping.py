@@ -2,8 +2,8 @@
 
 from fastmcp.server import Context
 
-from ..models.mapping import MappingRequest, MappingResponse
-from ..ontology import ConceptMatcher, EDAMConceptType, OntologyLoader
+from ..models.mapping import EDAMConceptType, MappingRequest, MappingResponse
+from ..ontology import ConceptMatcher, OntologyLoader
 from ..utils.context import MockContext
 
 
@@ -13,6 +13,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
     This tool takes a description (metadata, free text) and finds the most
     appropriate mappings to concepts in the EDAM ontology. It returns matches
     with confidence scores, indicating how well each concept matches the description.
+    Set ``concept_type`` (e.g. "Operation") to search only one EDAM branch.
 
     Args:
         request: Mapping request containing description and parameters.
@@ -33,7 +34,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
         concept_matcher = ConceptMatcher(ontology_loader)
 
         # First try exact matches
-        exact_matches = concept_matcher.find_exact_matches(request.description)
+        exact_matches = concept_matcher.find_exact_matches(request.description, request.concept_type)
 
         if exact_matches:
             context.info(f"Found {len(exact_matches)} exact matches")
@@ -51,68 +52,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
             context=request.context,
             max_results=request.max_results,
             min_confidence=request.min_confidence,
-        )
-
-        context.info(f"Found {len(matches)} semantic matches")
-
-        return MappingResponse(
-            matches=matches,
-            total_matches=len(matches),
-            has_exact_match=False,
-            confidence_threshold=request.min_confidence,
-        )
-
-    except Exception as e:
-        context.error(f"Error in concept mapping: {e}")
-        raise
-
-
-async def map_to_edam_operation(request: MappingRequest, context: Context) -> MappingResponse:
-    """Map a description to existing EDAM operations (i.e. bioinformatics data processing tasks).
-
-    This tool takes a description (metadata, free text) and finds the most
-    appropriate mappings to EDAM operations. It returns matches
-    with confidence scores, indicating how well each operation matches the description.
-
-    Args:
-        request: Mapping request containing description and parameters.
-        context: MCP context for logging and progress reporting.
-
-    Returns:
-        Mapping response with matched operations and confidence scores.
-    """
-
-    try:
-        # Log the request
-        context.info(f"Mapping description: {request.description[:100]}...")
-
-        # Initialize ontology components
-        ontology_loader = OntologyLoader()
-        if not ontology_loader.load_ontology():
-            raise RuntimeError("Failed to load EDAM ontology")
-
-        concept_matcher = ConceptMatcher(ontology_loader)
-
-        # First try exact matches
-        exact_matches = concept_matcher.find_exact_matches(request.description)
-
-        if exact_matches:
-            context.info(f"Found {len(exact_matches)} exact matches")
-            return MappingResponse(
-                matches=exact_matches,
-                total_matches=len(exact_matches),
-                has_exact_match=True,
-                confidence_threshold=request.min_confidence,
-            )
-
-        # Perform semantic matching
-        context.info("Performing semantic matching...")
-        matches = concept_matcher.match_concepts(
-            description=request.description,
-            context=request.context,
-            concept_type=EDAMConceptType.OPERATION,
-            max_results=request.max_results,
-            min_confidence=request.min_confidence,
+            concept_type=request.concept_type,
         )
 
         context.info(f"Found {len(matches)} semantic matches")
@@ -135,6 +75,7 @@ async def map_description_to_concepts(
     context: str | None = None,
     max_results: int = 5,
     min_confidence: float = 0.5,
+    concept_type: EDAMConceptType | None = None,
 ) -> MappingResponse:
     """Alternative interface for mapping descriptions to concepts.
 
@@ -143,6 +84,7 @@ async def map_description_to_concepts(
         context: Additional context information.
         max_results: Maximum number of results to return.
         min_confidence: Minimum confidence threshold.
+        concept_type: Restrict matches to this EDAM concept type; None searches all.
 
     Returns:
         Mapping response with matched concepts.
@@ -152,6 +94,7 @@ async def map_description_to_concepts(
         context=context,
         max_results=max_results,
         min_confidence=min_confidence,
+        concept_type=concept_type,
     )
 
     mock_context = MockContext()

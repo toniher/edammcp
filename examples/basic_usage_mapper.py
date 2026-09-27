@@ -11,6 +11,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 try:
+    from edam_mcp.models.mapping import EDAMConceptType
     from edam_mcp.tools.mapping import map_description_to_concepts
 except ImportError as e:
     print(f"Error importing edam_mcp: {e}")
@@ -27,17 +28,23 @@ async def example_mapping():
     """Example of mapping descriptions to EDAM concepts."""
     print("=== EDAM Concept Mapping Example ===\n")
 
-    # Example descriptions to map
+    # Example descriptions to map, optionally restricted to one EDAM branch
     descriptions = [
-        "sequence alignment tool",
-        "FASTQ file format",
-        "gene expression analysis",
-        "protein structure prediction",
-        "metabolomics data processing",
+        ("sequence alignment tool", None),
+        ("FASTQ file format", None),
+        ("gene expression analysis", None),
+        ("protein structure prediction", None),
+        ("metabolomics data processing", None),
+        # Bioconductor Spectra package, Operations only
+        (
+            "The Spectra package defines an efficient infrastructure for storing and handling mass spectrometry "
+            "spectra and functionality to subset, process, visualize and compare spectra data.",
+            EDAMConceptType.OPERATION,
+        ),
     ]
 
-    for description in descriptions:
-        print(f"Mapping: {description}")
+    for description, concept_type in descriptions:
+        print(f"Mapping [{concept_type or 'all types'}]: {description}")
 
         try:
             response = await map_description_to_concepts(
@@ -45,6 +52,7 @@ async def example_mapping():
                 context="bioinformatics tool",
                 max_results=3,
                 min_confidence=0.5,
+                concept_type=concept_type,
             )
 
             if response.matches:
