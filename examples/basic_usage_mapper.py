@@ -28,6 +28,12 @@ async def example_mapping():
     """Example of mapping descriptions to EDAM concepts."""
     print("=== EDAM Concept Mapping Example ===\n")
 
+    # Bioconductor Spectra package, mapped to one EDAM branch at a time
+    spectra = (
+        "The Spectra package defines an efficient infrastructure for storing and handling mass spectrometry "
+        "spectra and functionality to subset, process, visualize and compare spectra data."
+    )
+
     # Example descriptions to map, optionally restricted to one EDAM branch
     descriptions = [
         ("sequence alignment tool", None),
@@ -35,12 +41,8 @@ async def example_mapping():
         ("gene expression analysis", None),
         ("protein structure prediction", None),
         ("metabolomics data processing", None),
-        # Bioconductor Spectra package, Operations only
-        (
-            "The Spectra package defines an efficient infrastructure for storing and handling mass spectrometry "
-            "spectra and functionality to subset, process, visualize and compare spectra data.",
-            EDAMConceptType.OPERATION,
-        ),
+        (spectra, EDAMConceptType.OPERATION),
+        (spectra, EDAMConceptType.FORMAT),
     ]
 
     for description, concept_type in descriptions:
