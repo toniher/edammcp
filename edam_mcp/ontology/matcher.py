@@ -52,9 +52,17 @@ class ConceptMatcher:
             client = chromadb.PersistentClient(path=self.chroma_db)
             # Further details at: https://docs.trychroma.com/docs/collections/configure#hnsw-index-configuration
             # Embeddings are always passed explicitly, so no embedding function is needed
+            # Vectors from another model (or an unlabelled older DB) are invalid: start over
+            if any(
+                c.name == "concept_embeddings" and (c.metadata or {}).get("embedding_model") != settings.embedding_model
+                for c in client.list_collections()
+            ):
+                logger.info("Embedding model changed, rebuilding ChromaDB collection")
+                client.delete_collection("concept_embeddings")
             collection = self._collection = client.get_or_create_collection(
                 name="concept_embeddings",
                 embedding_function=None,
+                metadata={"embedding_model": settings.embedding_model},
                 configuration={"hnsw": {"space": "cosine", "ef_construction": 200}},
             )
             logger.info("Building concept embeddings and storing in ChromaDB...")

@@ -101,3 +101,31 @@ def test_chromadb_missing_raises_clear_error(tmp_path, monkeypatch):
 
     with pytest.raises(RuntimeError, match="chromadb not available"):
         _matcher(tmp_path, True, _fake_model()).match_concepts("alpha")
+
+
+def test_chromadb_rebuilds_when_embedding_model_changes(tmp_path, monkeypatch):
+    from edam_mcp.config import settings
+
+    monkeypatch.setattr(settings, "embedding_model", "model-a")
+    _matcher(tmp_path, True, _fake_model()).match_concepts("alpha")
+
+    same = _fake_model()
+    _matcher(tmp_path, True, same).match_concepts("alpha")
+    assert all(isinstance(c.args[0], str) for c in same.encode.call_args_list)  # same model: cache reused
+
+    monkeypatch.setattr(settings, "embedding_model", "model-b")
+    changed = _fake_model()
+    _matcher(tmp_path, True, changed).match_concepts("alpha")
+    corpus = [c.args[0] for c in changed.encode.call_args_list if not isinstance(c.args[0], str)]
+    assert len(corpus) == 1 and len(corpus[0]) == 3  # every concept re-encoded
+
+
+def test_chromadb_rebuilds_unlabelled_legacy_collection(tmp_path):
+    import chromadb
+
+    chromadb.PersistentClient(path=str(tmp_path / "default.db")).create_collection("concept_embeddings")
+
+    _matcher(tmp_path, True, _fake_model()).match_concepts("alpha")
+
+    meta = chromadb.PersistentClient(path=str(tmp_path / "default.db")).get_collection("concept_embeddings").metadata
+    assert meta["embedding_model"]
