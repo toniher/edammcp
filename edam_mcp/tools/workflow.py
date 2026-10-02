@@ -2,6 +2,7 @@
 
 from fastmcp.server import Context
 
+from ..config import settings
 from ..models.workflow import WorkflowFunction, WorkflowSummaryRequest, WorkflowSummaryResponse
 
 
@@ -241,7 +242,7 @@ async def get_workflow_summary(request: WorkflowSummaryRequest, context: Context
         },
         "min_confidence_threshold": {
             "type": "float",
-            "default": 0.5,
+            "default": settings.similarity_threshold,
             "description": "Minimum confidence threshold for accepting mappings",
             "range": [0.0, 1.0],
         },

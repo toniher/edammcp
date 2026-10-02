@@ -15,7 +15,7 @@ class MappingRequest(BaseModel):
     description: str                    # Text to map (required)
     context: Optional[str] = None      # Additional context
     max_results: Optional[int] = 5     # Maximum matches to return
-    min_confidence: Optional[float] = 0.5  # Minimum confidence threshold
+    min_confidence: Optional[float] = None  # Minimum confidence threshold (defaults to EDAM_SIMILARITY_THRESHOLD)
 ```
 
 #### Response
@@ -141,10 +141,10 @@ class MappingRequest(BaseModel):
     )
 
     min_confidence: Optional[float] = Field(
-        0.5,
+        None,
         ge=0.0,
         le=1.0,
-        description="Minimum confidence threshold for matches"
+        description="Minimum confidence threshold for matches (defaults to EDAM_SIMILARITY_THRESHOLD)"
     )
 ```
 
@@ -273,7 +273,7 @@ class Settings(BaseSettings):
 
     # Matching Configuration
     similarity_threshold: float = Field(
-        default=0.7,
+        default=0.5,
         ge=0.0,
         le=1.0,
         description="Minimum confidence threshold for concept mappings"
@@ -315,7 +315,7 @@ class Settings(BaseSettings):
 | Variable                    | Default          | Description                   |
 | --------------------------- | ---------------- | ----------------------------- |
 | `EDAM_ONTOLOGY_URL`         | EDAM dev OWL     | URL to EDAM ontology file     |
-| `EDAM_SIMILARITY_THRESHOLD` | 0.7              | Minimum confidence threshold  |
+| `EDAM_SIMILARITY_THRESHOLD` | 0.5              | Minimum confidence threshold  |
 | `EDAM_MAX_SUGGESTIONS`      | 5                | Maximum suggestions to return |
 | `EDAM_EMBEDDING_MODEL`      | all-MiniLM-L6-v2 | Sentence transformer model    |
 | `EDAM_CACHE_TTL`            | 3600             | Cache TTL in seconds          |
