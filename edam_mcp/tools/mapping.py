@@ -26,7 +26,9 @@ def get_matcher() -> ConceptMatcher:
     return _matcher
 
 
-async def map_to_edam_concept(request: MappingRequest, context: Context) -> MappingResponse:
+async def map_to_edam_concept(
+    request: MappingRequest, context: Context, matcher: ConceptMatcher | None = None
+) -> MappingResponse:
     """Map a description to existing EDAM concepts.
 
     This tool takes a description (metadata, free text) and finds the most
@@ -36,6 +38,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
     Args:
         request: Mapping request containing description and parameters.
         context: MCP context for logging and progress reporting.
+        matcher: Matcher to use; defaults to the shared one.
 
     Returns:
         Mapping response with matched concepts and confidence scores.
@@ -45,7 +48,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
         context.info(f"Mapping description: {request.description[:100]}...")
         min_confidence = request.min_confidence if request.min_confidence is not None else settings.similarity_threshold
 
-        concept_matcher = get_matcher()
+        concept_matcher = matcher or get_matcher()
 
         # First try exact matches
         exact_matches = concept_matcher.find_exact_matches(request.description)

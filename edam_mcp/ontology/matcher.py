@@ -47,14 +47,14 @@ class ConceptMatcher:
         if self.use_chromadb:
             try:
                 import chromadb
-            except ImportError:
-                logger.error("chromadb not available. Install with: pip install chromadb")
-                return
+            except ImportError as e:
+                raise RuntimeError("chromadb not available. Install with: pip install chromadb") from e
             client = chromadb.PersistentClient(path=self.chroma_db)
             # Further details at: https://docs.trychroma.com/docs/collections/configure#hnsw-index-configuration
             # Embeddings are always passed explicitly, so no embedding function is needed
             collection = self._collection = client.get_or_create_collection(
                 name="concept_embeddings",
+                embedding_function=None,
                 configuration={"hnsw": {"space": "cosine", "ef_construction": 200}},
             )
             logger.info("Building concept embeddings and storing in ChromaDB...")

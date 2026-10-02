@@ -43,6 +43,7 @@ async def suggest_new_concept(request: SuggestionRequest, context: Context) -> S
                 min_confidence=0.7,
             ),
             context,
+            concept_matcher,
         )
 
         # Check if we found good matches

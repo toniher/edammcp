@@ -1,5 +1,6 @@
 """ChromaDB cache must follow ontology changes (issue #65)."""
 
+import sys
 from unittest.mock import Mock
 
 import pytest
@@ -83,3 +84,20 @@ def test_chromadb_reuse_skips_encoding(tmp_path):
 
     assert [m.concept_uri for m in top] == ["gamma"]
     assert all(isinstance(c.args[0], str) for c in model.encode.call_args_list)
+
+
+def test_chromadb_collection_has_no_default_embedding_function(tmp_path):
+    import chromadb
+
+    matcher = _matcher(tmp_path, True, _fake_model())
+    matcher.match_concepts("alpha")
+
+    config = chromadb.PersistentClient(path=matcher.chroma_db).get_collection("concept_embeddings").configuration_json
+    assert config["embedding_function"]["type"] == "legacy"
+
+
+def test_chromadb_missing_raises_clear_error(tmp_path, monkeypatch):
+    monkeypatch.setitem(sys.modules, "chromadb", None)  # makes `import chromadb` raise ImportError
+
+    with pytest.raises(RuntimeError, match="chromadb not available"):
+        _matcher(tmp_path, True, _fake_model()).match_concepts("alpha")
