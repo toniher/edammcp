@@ -63,10 +63,6 @@ class ConceptMatcher:
 
         concepts = self.ontology_loader.concepts
         uris = list(concepts)
-        if self.use_chromadb:
-            # One lookup for all stored ids, then only embed the missing ones
-            existing = set(collection.get(include=[])["ids"])
-            uris = [uri for uri in uris if uri not in existing]
 
         # Create text representation for embedding
         texts = []
@@ -82,6 +78,18 @@ class ConceptMatcher:
 
             texts.append(preprocess_text(" ".join(text_parts)))
 
+        if self.use_chromadb:
+            # One lookup for all stored ids and texts: drop concepts removed from EDAM,
+            # then only embed the ones that are missing or whose text changed
+            stored = collection.get(include=["documents"])
+            stored_texts = dict(zip(stored["ids"], stored["documents"]))
+            removed = [uri for uri in stored_texts if uri not in concepts]
+            if removed:
+                collection.delete(ids=removed)
+            changed = [i for i, uri in enumerate(uris) if stored_texts.get(uri) != texts[i]]
+            uris = [uris[i] for i in changed]
+            texts = [texts[i] for i in changed]
+
         # Encode all texts in one batched call instead of one call per concept
         embeddings = self.embedding_model.encode(texts, show_progress_bar=False)
 
@@ -89,7 +97,7 @@ class ConceptMatcher:
             # One transaction per chunk instead of one per concept (slow on spinning disks)
             step = client.get_max_batch_size()
             for i in range(0, len(uris), step):
-                collection.add(
+                collection.upsert(
                     ids=uris[i : i + step],
                     embeddings=embeddings[i : i + step],
                     documents=texts[i : i + step],
