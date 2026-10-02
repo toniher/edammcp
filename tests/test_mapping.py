@@ -101,3 +101,49 @@ class TestMappingTool:
 
         response = await map_description_to_concepts(description="x", min_confidence=0.3)
         assert response.confidence_threshold == 0.3
+
+
+@pytest.fixture(autouse=True)
+def _reset_shared_matcher():
+    from edam_mcp.tools import mapping
+
+    mapping._matcher = None
+    yield
+    mapping._matcher = None
+
+
+@patch("edam_mcp.tools.mapping.OntologyLoader")
+@patch("edam_mcp.tools.mapping.ConceptMatcher")
+def test_get_matcher_shared_until_ttl(mock_matcher, mock_loader, monkeypatch):
+    from edam_mcp.config import settings
+    from edam_mcp.tools.mapping import get_matcher
+
+    mock_loader.return_value.load_ontology.return_value = True
+    mock_matcher.side_effect = lambda _: Mock()
+
+    first = get_matcher()
+    assert get_matcher() is first
+    assert mock_matcher.call_count == 1
+
+    monkeypatch.setattr(settings, "cache_ttl", -1)
+    second = get_matcher()
+    assert second is not first
+
+
+@pytest.mark.asyncio
+@patch("edam_mcp.tools.mapping.OntologyLoader")
+@patch("edam_mcp.tools.mapping.ConceptMatcher")
+async def test_suggestion_builds_one_matcher_per_call(mock_matcher, mock_loader, monkeypatch):
+    from edam_mcp.config import settings
+    from edam_mcp.tools.suggestion import suggest_concepts_for_description
+
+    mock_loader.return_value.load_ontology.return_value = True
+    mock_matcher.return_value.find_exact_matches.return_value = []
+    mock_matcher.return_value.match_concepts.return_value = []
+    monkeypatch.setattr(settings, "cache_ttl", -1)  # expire on every get_matcher() call
+
+    with patch("edam_mcp.tools.suggestion.ConceptSuggester") as suggester:
+        suggester.return_value.suggest_concepts.return_value = []
+        await suggest_concepts_for_description("x")
+
+    assert mock_matcher.call_count == 1

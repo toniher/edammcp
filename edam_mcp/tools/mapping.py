@@ -1,5 +1,7 @@
 """MCP tool for mapping descriptions to EDAM concepts."""
 
+import time
+
 from fastmcp.server import Context
 
 from ..config import settings
@@ -8,7 +10,25 @@ from ..ontology import ConceptMatcher, OntologyLoader
 from ..utils.context import MockContext
 
 
-async def map_to_edam_concept(request: MappingRequest, context: Context) -> MappingResponse:
+_matcher: ConceptMatcher | None = None
+_matcher_built = 0.0
+
+
+def get_matcher() -> ConceptMatcher:
+    """Return the shared matcher, rebuilt after settings.cache_ttl so ontology updates are picked up."""
+    # ponytail: module global, not thread-safe; fine for FastMCP's single event loop
+    global _matcher, _matcher_built
+    if _matcher is None or time.monotonic() - _matcher_built > settings.cache_ttl:
+        ontology_loader = OntologyLoader()
+        if not ontology_loader.load_ontology():
+            raise RuntimeError("Failed to load EDAM ontology")
+        _matcher, _matcher_built = ConceptMatcher(ontology_loader), time.monotonic()
+    return _matcher
+
+
+async def map_to_edam_concept(
+    request: MappingRequest, context: Context, matcher: ConceptMatcher | None = None
+) -> MappingResponse:
     """Map a description to existing EDAM concepts.
 
     This tool takes a description (metadata, free text) and finds the most
@@ -18,6 +38,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
     Args:
         request: Mapping request containing description and parameters.
         context: MCP context for logging and progress reporting.
+        matcher: Matcher to use; defaults to the shared one.
 
     Returns:
         Mapping response with matched concepts and confidence scores.
@@ -27,12 +48,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
         context.info(f"Mapping description: {request.description[:100]}...")
         min_confidence = request.min_confidence if request.min_confidence is not None else settings.similarity_threshold
 
-        # Initialize ontology components
-        ontology_loader = OntologyLoader()
-        if not ontology_loader.load_ontology():
-            raise RuntimeError("Failed to load EDAM ontology")
-
-        concept_matcher = ConceptMatcher(ontology_loader)
+        concept_matcher = matcher or get_matcher()
 
         # First try exact matches
         exact_matches = concept_matcher.find_exact_matches(request.description)
