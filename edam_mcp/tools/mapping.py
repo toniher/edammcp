@@ -2,6 +2,7 @@
 
 from fastmcp.server import Context
 
+from ..config import settings
 from ..models.mapping import MappingRequest, MappingResponse
 from ..ontology import ConceptMatcher, OntologyLoader
 from ..utils.context import MockContext
@@ -24,6 +25,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
     try:
         # Log the request
         context.info(f"Mapping description: {request.description[:100]}...")
+        min_confidence = request.min_confidence if request.min_confidence is not None else settings.similarity_threshold
 
         # Initialize ontology components
         ontology_loader = OntologyLoader()
@@ -41,7 +43,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
                 matches=exact_matches,
                 total_matches=len(exact_matches),
                 has_exact_match=True,
-                confidence_threshold=request.min_confidence,
+                confidence_threshold=min_confidence,
             )
 
         # Perform semantic matching
@@ -50,7 +52,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
             description=request.description,
             context=request.context,
             max_results=request.max_results,
-            min_confidence=request.min_confidence,
+            min_confidence=min_confidence,
         )
 
         context.info(f"Found {len(matches)} semantic matches")
@@ -59,7 +61,7 @@ async def map_to_edam_concept(request: MappingRequest, context: Context) -> Mapp
             matches=matches,
             total_matches=len(matches),
             has_exact_match=False,
-            confidence_threshold=request.min_confidence,
+            confidence_threshold=min_confidence,
         )
 
     except Exception as e:
@@ -72,7 +74,7 @@ async def map_description_to_concepts(
     description: str,
     context: str | None = None,
     max_results: int = 5,
-    min_confidence: float = 0.5,
+    min_confidence: float | None = None,
 ) -> MappingResponse:
     """Alternative interface for mapping descriptions to concepts.
 
@@ -80,7 +82,7 @@ async def map_description_to_concepts(
         description: Text description to map.
         context: Additional context information.
         max_results: Maximum number of results to return.
-        min_confidence: Minimum confidence threshold.
+        min_confidence: Minimum confidence threshold (defaults to settings.similarity_threshold).
 
     Returns:
         Mapping response with matched concepts.

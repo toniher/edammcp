@@ -21,7 +21,12 @@ class MappingRequest(BaseModel):
 
     max_results: int | None = Field(5, ge=1, le=20, description="Maximum number of concept matches to return")
 
-    min_confidence: float | None = Field(0.5, ge=0.0, le=1.0, description="Minimum confidence threshold for matches")
+    min_confidence: float | None = Field(
+        None,
+        ge=0.0,
+        le=1.0,
+        description="Minimum confidence threshold for matches (defaults to EDAM_SIMILARITY_THRESHOLD)",
+    )
 
 
 class ConceptMatch(BaseModel):

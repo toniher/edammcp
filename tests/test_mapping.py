@@ -80,3 +80,24 @@ class TestMappingTool:
         assert isinstance(response, MappingResponse)
         assert response.total_matches == 0
         assert response.has_exact_match is False
+
+    @pytest.mark.asyncio
+    @patch("edam_mcp.tools.mapping.OntologyLoader")
+    @patch("edam_mcp.tools.mapping.ConceptMatcher")
+    async def test_min_confidence_defaults_to_settings(self, mock_matcher, mock_loader, monkeypatch):
+        """Unset min_confidence falls back to settings.similarity_threshold; explicit value wins."""
+        from edam_mcp.config import settings
+
+        mock_loader.return_value.load_ontology.return_value = True
+        mock_matcher.return_value.find_exact_matches.return_value = []
+        mock_matcher.return_value.match_concepts.return_value = []
+        monkeypatch.setattr(settings, "similarity_threshold", 0.9)
+
+        assert MappingRequest(description="x").min_confidence is None
+
+        response = await map_description_to_concepts(description="x")
+        assert response.confidence_threshold == 0.9
+        assert mock_matcher.return_value.match_concepts.call_args.kwargs["min_confidence"] == 0.9
+
+        response = await map_description_to_concepts(description="x", min_confidence=0.3)
+        assert response.confidence_threshold == 0.3
