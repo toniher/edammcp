@@ -27,6 +27,8 @@ class ConceptMatcher:
         self.concept_embeddings: dict[str, np.ndarray] = {}
         self.use_chromadb = settings.use_chromadb
         self.chroma_db = os.path.join(settings.cache_dir, "default.db")
+        self._ready = False
+        self._collection = None
         # Don't build embeddings immediately - do it lazily when needed
 
     def _build_embeddings(self) -> None:
@@ -45,16 +47,14 @@ class ConceptMatcher:
         if self.use_chromadb:
             try:
                 import chromadb
-                from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
             except ImportError:
                 logger.error("chromadb not available. Install with: pip install chromadb")
                 return
             client = chromadb.PersistentClient(path=self.chroma_db)
             # Further details at: https://docs.trychroma.com/docs/collections/configure#hnsw-index-configuration
-            embedding_function = SentenceTransformerEmbeddingFunction(settings.embedding_model)
-            collection = client.get_or_create_collection(
+            # Embeddings are always passed explicitly, so no embedding function is needed
+            collection = self._collection = client.get_or_create_collection(
                 name="concept_embeddings",
-                embedding_function=embedding_function,
                 configuration={"hnsw": {"space": "cosine", "ef_construction": 200}},
             )
             logger.info("Building concept embeddings and storing in ChromaDB...")
@@ -91,7 +91,7 @@ class ConceptMatcher:
             texts = [texts[i] for i in changed]
 
         # Encode all texts in one batched call instead of one call per concept
-        embeddings = self.embedding_model.encode(texts, show_progress_bar=False)
+        embeddings = self.embedding_model.encode(texts, show_progress_bar=False) if texts else []
 
         if self.use_chromadb:
             # One transaction per chunk instead of one per concept (slow on spinning disks)
@@ -110,10 +110,11 @@ class ConceptMatcher:
                         for uri in uris[i : i + step]
                     ],
                 )
-            logger.info(f"Stored embeddings for {len(concepts)} concepts in ChromaDB")
+            logger.info(f"Stored embeddings for {len(uris)} new/changed concepts in ChromaDB")
         else:
             self.concept_embeddings.update(zip(uris, embeddings))
             logger.info(f"Built embeddings for {len(self.concept_embeddings)} concepts")
+        self._ready = True
 
     def match_concepts(
         self,
@@ -134,7 +135,7 @@ class ConceptMatcher:
             List of concept matches ordered by confidence.
         """
         # Build embeddings if not already built
-        if not self.concept_embeddings:
+        if not self._ready:
             self._build_embeddings()
 
         # Preprocess input text
@@ -182,16 +183,8 @@ class ConceptMatcher:
         similarities = []
 
         if self.use_chromadb:
-            try:
-                import chromadb
-            except ImportError:
-                logger.error("chromadb not available. Install with: pip install chromadb")
-                return []
-
-            client = chromadb.PersistentClient(path=self.chroma_db)
-            collection = client.get_or_create_collection(name="concept_embeddings")
             # Use ChromaDB's default query for similarity search
-            query_results = collection.query(
+            query_results = self._collection.query(
                 query_embeddings=[description_embedding],
                 n_results=max_results,
             )
