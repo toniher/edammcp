@@ -8,7 +8,7 @@ Get up and running in minutes:
 
 ```bash
 # Install dependencies
-uv sync --dev
+uv sync --all-extras --dev
 
 # Test basic functionality
 uv run python examples/simple_test.py
@@ -53,25 +53,16 @@ Prospectively, this could then be used to generate an automatic PR in knowledge 
 
 - **[Architecture](developer/architecture.md)** - High-level system design and components
 - **[API Reference](developer/api.md)** - Complete API documentation with examples
-- **[Models](developer/models.md)** - Pydantic models for requests and responses
-- **[Tools](developer/tools.md)** - MCP tool implementations and usage
-- **[Ontology](developer/ontology.md)** - EDAM ontology handling and processing
-- **[Utilities](developer/utils.md)** - Helper functions and utilities
 
 ### For Users
 
 - **[Installation](getting-started/installation.md)** - Setup and installation guide
-- **[Quick Start](getting-started/quickstart.md)** - Get running in 5 minutes
-- **[Configuration](getting-started/configuration.md)** - Environment variables and settings
+- **[Configuration](getting-started/installation.md#configuration)** - Environment variables and settings
 - **[Examples](examples/basic-usage.md)** - Practical usage examples
-- **[MCP Integration](examples/mcp-integration.md)** - Integration with MCP clients
 
 ### For Contributors
 
 - **[Development Setup](contributing/development-setup.md)** - Local development environment
-- **[Adding Tools](contributing/adding-tools.md)** - How to add new MCP tools
-- **[Testing](contributing/testing.md)** - Testing guidelines and practices
-- **[Code Style](contributing/code-style.md)** - Coding standards and conventions
 
 ## 🔧 Key Features
 

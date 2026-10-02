@@ -18,7 +18,7 @@ git clone https://github.com/your-username/edammcp.git
 cd edammcp
 
 # Install with uv
-uv sync --dev
+uv sync --all-extras --dev
 
 # Install in development mode
 uv pip install -e .
@@ -60,7 +60,7 @@ For development work, install with all development dependencies:
 
 ```bash
 # Install development dependencies
-uv sync --dev
+uv sync --all-extras --dev
 
 # Install in development mode
 uv pip install -e .
@@ -261,7 +261,7 @@ python --version
 ```bash
 # Clear and reinstall dependencies
 rm -rf .venv/
-uv sync --dev
+uv sync --all-extras --dev
 uv pip install -e .
 ```
 
@@ -330,7 +330,7 @@ export EDAM_ONTOLOGY_URL="file:///path/to/local/edam.owl"
 git pull origin main
 
 # Update dependencies
-uv sync --dev
+uv sync --all-extras --dev
 
 # Reinstall package
 uv pip install -e .
@@ -376,9 +376,7 @@ rm -rf edammcp/
 
 After installation:
 
-1. **Read the [Quick Start Guide](quickstart.md)** to get running quickly
-2. **Check the [Configuration Guide](configuration.md)** for advanced setup
-3. **Explore [Examples](../examples/basic-usage.md)** for usage patterns
-4. **Review [API Documentation](../developer/api.md)** for detailed reference
-5. **Join the [Community](../contributing/development-setup.md)** for support
-
+1. **Check the [Configuration Guide](#configuration)** for advanced setup
+2. **Explore [Examples](../examples/basic-usage.md)** for usage patterns
+3. **Review [API Documentation](../developer/api.md)** for detailed reference
+4. **Join the [Community](../contributing/development-setup.md)** for support

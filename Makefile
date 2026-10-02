@@ -10,7 +10,7 @@ install: ## Install production dependencies
 	uv sync
 
 install-dev: ## Install development dependencies and package
-	uv sync --dev
+	uv sync --all-extras --dev
 	uv pip install -e .
 
 test: ## Run tests
@@ -65,7 +65,7 @@ clean: ## Clean up generated files
 	rm -rf .coverage
 
 setup: ## Initial setup of development environment
-	uv sync --dev
+	uv sync --all-extras --dev
 	uv pip install -e .
 	$(MAKE) format
 	$(MAKE) check-all 
