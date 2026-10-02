@@ -61,15 +61,17 @@ class ConceptMatcher:
         else:
             logger.info("Building concept embeddings and storing in memory...")
 
-        for uri, concept in self.ontology_loader.concepts.items():
-            if self.use_chromadb:
-                existing = collection.get(ids=[uri])
-                # ChromaDB returns empty dict if not found
-                if existing and existing.get("ids"):
-                    logger.debug(f"Embedding for {uri} already exists in ChromaDB, skipping.")
-                    continue
+        concepts = self.ontology_loader.concepts
+        uris = list(concepts)
+        if self.use_chromadb:
+            # One lookup for all stored ids, then only embed the missing ones
+            existing = set(collection.get(include=[])["ids"])
+            uris = [uri for uri in uris if uri not in existing]
 
-            # Create text representation for embedding
+        # Create text representation for embedding
+        texts = []
+        for uri in uris:
+            concept = concepts[uri]
             text_parts = [concept["label"]]
 
             if concept["definition"]:
@@ -78,35 +80,31 @@ class ConceptMatcher:
             if concept["synonyms"]:
                 text_parts.extend(concept["synonyms"])
 
-            text = " ".join(text_parts)
-            processed_text = preprocess_text(text)
+            texts.append(preprocess_text(" ".join(text_parts)))
 
-            # Generate embedding
-            embedding = self.embedding_model.encode(processed_text, show_progress_bar=False)
-
-            if self.use_chromadb:
-                collection.add(
-                    ids=[uri],
-                    embeddings=[embedding.tolist()],
-                    documents=[processed_text],
-                    metadatas=[
-                        {
-                            "label": concept["label"],
-                            "definition": concept.get("definition"),
-                            "synonyms": (
-                                ", ".join(concept["synonyms"])
-                                if isinstance(concept.get("synonyms"), list)
-                                else concept.get("synonyms")
-                            ),
-                        }
-                    ],
-                )
-            else:
-                self.concept_embeddings[uri] = embedding
+        # Encode all texts in one batched call instead of one call per concept
+        embeddings = self.embedding_model.encode(texts, show_progress_bar=False)
 
         if self.use_chromadb:
-            logger.info(f"Stored embeddings for {len(self.ontology_loader.concepts)} concepts in ChromaDB")
+            # One transaction per chunk instead of one per concept (slow on spinning disks)
+            step = client.get_max_batch_size()
+            for i in range(0, len(uris), step):
+                collection.add(
+                    ids=uris[i : i + step],
+                    embeddings=embeddings[i : i + step],
+                    documents=texts[i : i + step],
+                    metadatas=[
+                        {
+                            "label": concepts[uri]["label"],
+                            "definition": concepts[uri].get("definition"),
+                            "synonyms": ", ".join(concepts[uri]["synonyms"]),
+                        }
+                        for uri in uris[i : i + step]
+                    ],
+                )
+            logger.info(f"Stored embeddings for {len(concepts)} concepts in ChromaDB")
         else:
+            self.concept_embeddings.update(zip(uris, embeddings))
             logger.info(f"Built embeddings for {len(self.concept_embeddings)} concepts")
 
     def match_concepts(
