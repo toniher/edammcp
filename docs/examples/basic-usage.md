@@ -46,6 +46,15 @@ Found 3 matches:
     Type: Operation
 ```
 
+To search one EDAM branch only, set `concept_type` to `"Topic"`, `"Operation"`, `"Data"` or `"Format"`:
+
+```python
+response = await map_description_to_concepts(
+    description="sequence alignment tool",
+    concept_type="Operation",
+)
+```
+
 ### 2. Concept Suggestion
 
 Suggest new concepts when no suitable match exists:

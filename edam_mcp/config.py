@@ -14,12 +14,11 @@ class Settings(BaseSettings):
     )
 
     # Matching Configuration
-    # TODO: This is not being used
     similarity_threshold: float = Field(
-        default=0.7,
+        default=0.5,
         ge=0.0,
         le=1.0,
-        description="Minimum confidence threshold for concept mappings",
+        description="Default minimum confidence for concept mappings when a request doesn't set one",
     )
 
     max_suggestions: int = Field(default=5, ge=1, le=20, description="Maximum number of suggestions to return")

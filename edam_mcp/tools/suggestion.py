@@ -6,9 +6,9 @@ from fastmcp.server import Context
 from ..config import settings
 from ..models.mapping import MappingRequest
 from ..models.suggestion import SuggestionRequest, SuggestionResponse
-from ..ontology import ConceptMatcher, ConceptSuggester, OntologyLoader
+from ..ontology import ConceptSuggester
 from ..utils.context import MockContext
-from .mapping import map_to_edam_concept
+from .mapping import get_matcher, map_to_edam_concept
 
 
 async def suggest_new_concept(request: SuggestionRequest, context: Context) -> SuggestionResponse:
@@ -30,13 +30,8 @@ async def suggest_new_concept(request: SuggestionRequest, context: Context) -> S
         # Log the request
         context.info(f"Suggesting concepts for: {request.description[:100]}...")
 
-        # Initialize ontology components
-        ontology_loader = OntologyLoader()
-        if not ontology_loader.load_ontology():
-            raise RuntimeError("Failed to load EDAM ontology")
-
-        concept_matcher = ConceptMatcher(ontology_loader)
-        concept_suggester = ConceptSuggester(ontology_loader, concept_matcher)
+        concept_matcher = get_matcher()
+        concept_suggester = ConceptSuggester(concept_matcher.ontology_loader, concept_matcher)
 
         # First attempt to map to existing concepts
         context.info("Attempting to map to existing concepts...")
@@ -48,6 +43,7 @@ async def suggest_new_concept(request: SuggestionRequest, context: Context) -> S
                 min_confidence=0.7,
             ),
             context,
+            concept_matcher,
         )
 
         # Check if we found good matches

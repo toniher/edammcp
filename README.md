@@ -18,7 +18,7 @@ git clone git@github.com:edamontology/edammcp.git
 cd edammcp
 
 # Install with uv (recommended)
-uv sync --dev
+uv sync --all-extras --dev
 
 # Or install manually
 uv sync
@@ -172,7 +172,7 @@ edam_mcp/
 
 ```bash
 # Install development dependencies
-uv sync --dev
+uv sync --all-extras --dev
 
 # Run tests
 uv run pytest
@@ -195,7 +195,7 @@ uv run pre-commit run --all-files
 The server can be configured through environment variables:
 
 - `EDAM_ONTOLOGY_URL`: URL to the EDAM ontology file (default: official EDAM OWL file)
-- `EDAM_SIMILARITY_THRESHOLD`: Minimum confidence threshold for mappings (default: 0.7)
+- `EDAM_SIMILARITY_THRESHOLD`: Minimum confidence threshold for mappings (default: 0.5; a request's `min_confidence` overrides it)
 - `EDAM_MAX_SUGGESTIONS`: Maximum number of suggestions to return (default: 5)
 
 ## License

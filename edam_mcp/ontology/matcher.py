@@ -12,8 +12,7 @@ from .loader import OntologyLoader
 
 logger = logging.getLogger(__name__)
 
-# Bumped when stored metadata changes (v2 adds "type"), so older caches are rebuilt instead of silently unfiltered
-CHROMA_COLLECTION = "concept_embeddings_v2"
+CHROMA_COLLECTION = "concept_embeddings"
 
 
 class ConceptMatcher:
@@ -30,6 +29,8 @@ class ConceptMatcher:
         self.concept_embeddings: dict[str, np.ndarray] = {}
         self.use_chromadb = settings.use_chromadb
         self.chroma_db = os.path.join(settings.cache_dir, "default.db")
+        self._ready = False
+        self._collection = None
         # Don't build embeddings immediately - do it lazily when needed
 
     def _build_embeddings(self) -> None:
@@ -48,31 +49,35 @@ class ConceptMatcher:
         if self.use_chromadb:
             try:
                 import chromadb
-                from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
-            except ImportError:
-                logger.error("chromadb not available. Install with: pip install chromadb")
-                return
+            except ImportError as e:
+                raise RuntimeError("chromadb not available. Install with: pip install chromadb") from e
             client = chromadb.PersistentClient(path=self.chroma_db)
             # Further details at: https://docs.trychroma.com/docs/collections/configure#hnsw-index-configuration
-            embedding_function = SentenceTransformerEmbeddingFunction(settings.embedding_model)
-            collection = client.get_or_create_collection(
+            # Embeddings are always passed explicitly, so no embedding function is needed
+            # Vectors from another model (or an unlabelled older DB) are invalid: start over
+            if any(
+                c.name == CHROMA_COLLECTION and (c.metadata or {}).get("embedding_model") != settings.embedding_model
+                for c in client.list_collections()
+            ):
+                logger.info("Embedding model changed, rebuilding ChromaDB collection")
+                client.delete_collection(CHROMA_COLLECTION)
+            collection = self._collection = client.get_or_create_collection(
                 name=CHROMA_COLLECTION,
-                embedding_function=embedding_function,
+                embedding_function=None,
+                metadata={"embedding_model": settings.embedding_model},
                 configuration={"hnsw": {"space": "cosine", "ef_construction": 200}},
             )
             logger.info("Building concept embeddings and storing in ChromaDB...")
         else:
             logger.info("Building concept embeddings and storing in memory...")
 
-        for uri, concept in self.ontology_loader.concepts.items():
-            if self.use_chromadb:
-                existing = collection.get(ids=[uri])
-                # ChromaDB returns empty dict if not found
-                if existing and existing.get("ids"):
-                    logger.debug(f"Embedding for {uri} already exists in ChromaDB, skipping.")
-                    continue
+        concepts = self.ontology_loader.concepts
+        uris = list(concepts)
 
-            # Create text representation for embedding
+        # Create text representation for embedding
+        texts = []
+        for uri in uris:
+            concept = concepts[uri]
             text_parts = [concept["label"]]
 
             if concept["definition"]:
@@ -81,37 +86,51 @@ class ConceptMatcher:
             if concept["synonyms"]:
                 text_parts.extend(concept["synonyms"])
 
-            text = " ".join(text_parts)
-            processed_text = preprocess_text(text)
-
-            # Generate embedding
-            embedding = self.embedding_model.encode(processed_text, show_progress_bar=False)
-
-            if self.use_chromadb:
-                collection.add(
-                    ids=[uri],
-                    embeddings=[embedding.tolist()],
-                    documents=[processed_text],
-                    metadatas=[
-                        {
-                            "label": concept["label"],
-                            "type": concept["type"],
-                            "definition": concept.get("definition"),
-                            "synonyms": (
-                                ", ".join(concept["synonyms"])
-                                if isinstance(concept.get("synonyms"), list)
-                                else concept.get("synonyms")
-                            ),
-                        }
-                    ],
-                )
-            else:
-                self.concept_embeddings[uri] = embedding
+            texts.append(preprocess_text(" ".join(text_parts)))
 
         if self.use_chromadb:
-            logger.info(f"Stored embeddings for {len(self.ontology_loader.concepts)} concepts in ChromaDB")
+            # One lookup for all stored ids and texts: drop concepts removed from EDAM,
+            # then only embed the ones that are missing, whose text changed, or that lack "type"
+            # metadata (older caches), which the concept_type filter needs
+            stored = collection.get(include=["documents", "metadatas"])
+            stored_texts = {
+                uri: doc
+                for uri, doc, meta in zip(stored["ids"], stored["documents"], stored["metadatas"])
+                if meta and "type" in meta
+            }
+            removed = [uri for uri in stored["ids"] if uri not in concepts]
+            if removed:
+                collection.delete(ids=removed)
+            changed = [i for i, uri in enumerate(uris) if stored_texts.get(uri) != texts[i]]
+            uris = [uris[i] for i in changed]
+            texts = [texts[i] for i in changed]
+
+        # Encode all texts in one batched call instead of one call per concept
+        embeddings = self.embedding_model.encode(texts, show_progress_bar=False) if texts else []
+
+        if self.use_chromadb:
+            # One transaction per chunk instead of one per concept (slow on spinning disks)
+            step = client.get_max_batch_size()
+            for i in range(0, len(uris), step):
+                collection.upsert(
+                    ids=uris[i : i + step],
+                    embeddings=embeddings[i : i + step],
+                    documents=texts[i : i + step],
+                    metadatas=[
+                        {
+                            "label": concepts[uri]["label"],
+                            "type": concepts[uri]["type"],
+                            "definition": concepts[uri].get("definition"),
+                            "synonyms": ", ".join(concepts[uri]["synonyms"]),
+                        }
+                        for uri in uris[i : i + step]
+                    ],
+                )
+            logger.info(f"Stored embeddings for {len(uris)} new/changed concepts in ChromaDB")
         else:
+            self.concept_embeddings.update(zip(uris, embeddings))
             logger.info(f"Built embeddings for {len(self.concept_embeddings)} concepts")
+        self._ready = True
 
     def match_concepts(
         self,
@@ -134,7 +153,7 @@ class ConceptMatcher:
             List of concept matches ordered by confidence.
         """
         # Build embeddings if not already built
-        if not self.concept_embeddings:
+        if not self._ready:
             self._build_embeddings()
 
         # Preprocess input text
@@ -187,16 +206,8 @@ class ConceptMatcher:
         similarities = []
 
         if self.use_chromadb:
-            try:
-                import chromadb
-            except ImportError:
-                logger.error("chromadb not available. Install with: pip install chromadb")
-                return []
-
-            client = chromadb.PersistentClient(path=self.chroma_db)
-            collection = client.get_or_create_collection(name=CHROMA_COLLECTION)
             # The where filter is applied during the search, so we get up to max_results of the requested type
-            query_results = collection.query(
+            query_results = self._collection.query(
                 query_embeddings=[description_embedding],
                 n_results=max_results,
                 where={"type": concept_type} if concept_type else None,
@@ -243,23 +254,10 @@ class ConceptMatcher:
         for uri, concept in self.ontology_loader.concepts.items():
             if concept_type and concept["type"] != concept_type:
                 continue
-            # Check label
-            if description_lower == concept["label"].lower():
-                match = ConceptMatch(
-                    concept_uri=uri,
-                    concept_label=concept["label"],
-                    confidence=1.0,
-                    concept_type=concept["type"],
-                    definition=concept["definition"],
-                    synonyms=concept["synonyms"],
-                )
-                matches.append(match)
-                continue
-
-            # Check synonyms
-            for synonym in concept["synonyms"]:
-                if description_lower == synonym.lower():
-                    match = ConceptMatch(
+            names = {concept["label"].lower(), *(syn.lower() for syn in concept["synonyms"])}
+            if description_lower in names:
+                matches.append(
+                    ConceptMatch(
                         concept_uri=uri,
                         concept_label=concept["label"],
                         confidence=1.0,
@@ -267,8 +265,7 @@ class ConceptMatcher:
                         definition=concept["definition"],
                         synonyms=concept["synonyms"],
                     )
-                    matches.append(match)
-                    break
+                )
 
         return matches
 

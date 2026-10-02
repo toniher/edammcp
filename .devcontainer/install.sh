@@ -4,4 +4,4 @@
 pip install uv
 
 # install dev dependencies
-uv sync --dev
+uv sync --all-extras --dev
