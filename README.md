@@ -18,7 +18,7 @@ git clone git@github.com:edamontology/edammcp.git
 cd edammcp
 
 # Install with uv (recommended)
-uv sync --dev
+uv sync --all-extras --dev
 
 # Or install manually
 uv sync
@@ -172,7 +172,7 @@ edam_mcp/
 
 ```bash
 # Install development dependencies
-uv sync --dev
+uv sync --all-extras --dev
 
 # Run tests
 uv run pytest

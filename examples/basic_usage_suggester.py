@@ -15,7 +15,7 @@ try:
 except ImportError as e:
     print(f"Error importing edam_mcp: {e}")
     print("Make sure you have installed the package in development mode:")
-    print("  uv sync --dev")
+    print("  uv sync --all-extras --dev")
     sys.exit(1)
 
 # Configure logging

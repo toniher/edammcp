@@ -40,7 +40,7 @@ powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 
 ```bash
 # Install all dependencies including development tools
-uv sync --dev
+uv sync --all-extras --dev
 
 # Install the package in development mode
 uv pip install -e .
