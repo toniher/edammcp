@@ -197,6 +197,7 @@ The server can be configured through environment variables:
 - `EDAM_ONTOLOGY_URL`: URL to the EDAM ontology file (default: official EDAM OWL file)
 - `EDAM_SIMILARITY_THRESHOLD`: Minimum confidence threshold for mappings (default: 0.5; a request's `min_confidence` overrides it)
 - `EDAM_MAX_SUGGESTIONS`: Maximum number of suggestions to return (default: 5)
+- `EDAM_INCLUDE_DEPRECATED`: Also index deprecated EDAM classes (default: false)
 
 ## License
 

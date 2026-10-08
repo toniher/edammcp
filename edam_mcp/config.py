@@ -38,6 +38,8 @@ class Settings(BaseSettings):
 
     model_config = {"env_prefix": "EDAM_", "case_sensitive": False}
 
+    include_deprecated: bool = Field(default=False, description="Also index deprecated (owl:deprecated) EDAM classes")
+
     use_chromadb: bool = Field(default=False, description="Use persistent chromadb to speed up the query process")
 
 
