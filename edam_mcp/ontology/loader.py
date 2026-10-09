@@ -51,10 +51,12 @@ class OntologyLoader:
     def _load_cache(self):
         concepts_path, types_path, _ = self._cache_paths()
         with open(concepts_path, "rb") as f:
-            self.concepts = pickle.load(f)
-        # Caches from before the deprecated flag existed must be rebuilt from the OWL
-        if any("deprecated" not in c for c in self.concepts.values()):
+            concepts = pickle.load(f)
+        # Caches from before the deprecated flag existed must be rebuilt from the OWL;
+        # check before assigning so stale entries don't leak into the fallback parse
+        if any("deprecated" not in c for c in concepts.values()):
             raise ValueError("cache lacks deprecated flag")
+        self.concepts = concepts
         with open(types_path, "rb") as f:
             self.concept_types = pickle.load(f)
 
