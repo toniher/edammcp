@@ -118,7 +118,9 @@ def query_by_edam_terms(
         key = FILTER_KEYS[category]
         # Quoted for an exact match; unquoted, bio.tools does a loose text match on the ID
         if params.setdefault(key, f'"{term}"') != f'"{term}"':
-            raise ValueError(f"bio.tools can only combine one {category} term per query, got {params[key]} and {term}")
+            raise ValueError(
+                f'bio.tools can only combine one {category} term per query, got {params[key]} and "{term}"'
+            )
 
     matches: list[BiotoolsMatch] = []
     total = _search(params, max_results, matches, set())
