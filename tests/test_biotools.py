@@ -25,7 +25,7 @@ def _tool(_id, topics=(), function=None):
         "biotoolsID": _id,
         "name": _id,
         "description": None,
-        "topic": [{"uri": u} for u in topics],
+        "topic": [{"uri": u, "term": "Phylogenetics"} for u in topics],
         "function": function or [],
     }
 
@@ -44,7 +44,15 @@ PAGES = {
         "next": None,
         "list": [
             _tool("tool_a", topics=[TOPIC]),  # duplicate across pages
-            _tool("tool_b", function=[{"input": [{"data": {"uri": DATA}, "format": [{"uri": FORMAT}]}], "output": []}]),
+            _tool(
+                "tool_b",
+                function=[
+                    {
+                        "input": [{"data": {"uri": DATA, "term": "Sequence motif"}, "format": [{"uri": FORMAT}]}],
+                        "output": [{"format": [{"uri": FORMAT, "term": "FASTA"}]}],
+                    }
+                ],
+            ),
         ],
     },
 }
@@ -75,22 +83,30 @@ class TestQueryBiotools:
 
         assert isinstance(result, BiotoolsQueryResponse)
         assert result.matches == [
-            BiotoolsMatch(name="tool_a", description="", biotools_link="https://bio.tools/tool_a", topic_terms=[TOPIC]),
+            BiotoolsMatch(
+                name="tool_a",
+                description="",
+                biotools_link="https://bio.tools/tool_a",
+                topic_terms={TOPIC: "Phylogenetics"},
+            ),
             BiotoolsMatch(
                 name="tool_b",
                 description="",
                 biotools_link="https://bio.tools/tool_b",
-                data_terms=[DATA],
-                format_terms=[FORMAT],
+                input_data_terms={DATA: "Sequence motif"},
+                input_format_terms={FORMAT: ""},
+                output_format_terms={FORMAT: "FASTA"},
             ),
         ]
+        assert result.total_matches == 4  # bio.tools count, not len(matches)
         # seed goes through params (so it is URL-encoded) and pagination advances
         assert [c.kwargs["params"]["page"] for c in fake_api.call_args_list] == [1, 2]
         assert fake_api.call_args.kwargs["params"]["q"] == "a&b=c"
         assert fake_api.call_args.kwargs["params"]["sort"] == "score"
 
     def test_stops_at_max_results(self, fake_api):
-        assert len(query_by_text("x", max_results=1)) == 1
+        matches, total = query_by_text("x", max_results=1)
+        assert (len(matches), total) == (1, 4)
         assert fake_api.call_count == 1
 
     @pytest.mark.asyncio

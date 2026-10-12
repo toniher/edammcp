@@ -38,20 +38,26 @@ class BiotoolsMatch(BaseModel):
 
     biotools_link: str = Field(..., description="Tool link in biotools")
 
-    topic_terms: list[str] = Field(
-        default_factory=list, description="List of uris of the EDAM terms belonging to topic category"
+    topic_terms: dict[str, str] = Field(default_factory=dict, description="EDAM topic terms of the tool, URI to label")
+
+    operation_terms: dict[str, str] = Field(
+        default_factory=dict, description="EDAM operation terms of the tool functions, URI to label"
     )
 
-    operation_terms: list[str] = Field(
-        default_factory=list, description="List of uris of the EDAM terms belonging to operation category"
+    input_data_terms: dict[str, str] = Field(
+        default_factory=dict, description="EDAM data terms of the tool inputs, URI to label"
     )
 
-    data_terms: list[str] = Field(
-        default_factory=list, description="List of uris of the EDAM terms belonging to data category"
+    input_format_terms: dict[str, str] = Field(
+        default_factory=dict, description="EDAM format terms of the tool inputs, URI to label"
     )
 
-    format_terms: list[str] = Field(
-        default_factory=list, description="List of uris of the EDAM terms belonging to format category"
+    output_data_terms: dict[str, str] = Field(
+        default_factory=dict, description="EDAM data terms of the tool outputs, URI to label"
+    )
+
+    output_format_terms: dict[str, str] = Field(
+        default_factory=dict, description="EDAM format terms of the tool outputs, URI to label"
     )
 
 
@@ -60,4 +66,7 @@ class BiotoolsQueryResponse(BaseModel):
 
     matches: list[BiotoolsMatch] = Field(..., description="List of matched tools in biotools database")
 
-    total_matches: int = Field(..., description="Total number of matches found")
+    total_matches: int = Field(
+        ...,
+        description="Total number of tools bio.tools reports for the query, including unannotated ones and those beyond max_results",
+    )

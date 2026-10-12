@@ -1,42 +1,43 @@
-import logging
 from time import sleep
 
 import requests
 
 from ..models.biotools import BiotoolsMatch
 
-logger = logging.getLogger(__name__)
-
 API_URL = "https://bio.tools/api/t/"
 FILTER_KEYS = {"topic": "topicID", "operation": "operationID", "data": "dataTypeID", "format": "dataFormatID"}
 
 
-def _uris(items) -> list[str]:
-    return [x["uri"] for x in items or []]
+def _terms(items) -> dict[str, str]:
+    """Map EDAM term URI to label, deduplicated."""
+    return {x["uri"]: x.get("term") or "" for x in items or []}
+
+
+def _io_terms(functions: list[dict], key: str) -> tuple[dict[str, str], dict[str, str]]:
+    """Data and format terms of the inputs or outputs (key) of all functions."""
+    ios = [io for fn in functions for io in fn.get(key) or []]
+    formats = [f for io in ios for f in io.get("format") or []]
+    return _terms([io["data"] for io in ios if io.get("data")]), _terms(formats)
 
 
 def _to_match(tool: dict) -> BiotoolsMatch | None:
     """Build a match from a bio.tools entry, or None if it has no EDAM annotations."""
-    topics = _uris(tool.get("topic"))
-    operations, data, formats = [], [], []
-    for fn in tool.get("function") or []:
-        operations += _uris(fn.get("operation"))
-        for io in (fn.get("input") or []) + (fn.get("output") or []):
-            if io.get("data"):
-                data.append(io["data"]["uri"])
-            formats += _uris(io.get("format"))
+    functions = tool.get("function") or []
+    terms = {
+        "topic_terms": _terms(tool.get("topic")),
+        "operation_terms": _terms([op for fn in functions for op in fn.get("operation") or []]),
+    }
+    terms["input_data_terms"], terms["input_format_terms"] = _io_terms(functions, "input")
+    terms["output_data_terms"], terms["output_format_terms"] = _io_terms(functions, "output")
 
-    if not (topics or operations or data or formats):
+    if not any(terms.values()):
         return None
 
     return BiotoolsMatch(
         name=tool["name"],
         description=tool.get("description") or "",
         biotools_link=f"https://bio.tools/{tool['biotoolsID']}",
-        topic_terms=sorted(set(topics)),
-        operation_terms=sorted(set(operations)),
-        data_terms=sorted(set(data)),
-        format_terms=sorted(set(formats)),
+        **terms,
     )
 
 
@@ -72,7 +73,7 @@ def _search(params: dict, max_results: int, matches: list[BiotoolsMatch], seen: 
 def query_by_text(
     seed: str,
     max_results: int = 10,
-) -> list[BiotoolsMatch]:
+) -> tuple[list[BiotoolsMatch], int]:
     """Search for tools in bio.tools matching the keywords in seed, ranked by bio.tools relevance.
 
     Only tools annotated with at least one EDAM term are returned.
@@ -82,18 +83,17 @@ def query_by_text(
         max_results: Maximum number of matches to return.
 
     Returns:
-        List of bio.tools tools that matched the keywords
+        Matched bio.tools tools, and the total number of tools bio.tools reports for the query
     """
     matches: list[BiotoolsMatch] = []
     total = _search({"q": seed, "sort": "score"}, max_results, matches, set())
-    logger.info(f"There are {total} tools in bio.tools related to your keyword, displaying at most {max_results}")
-    return matches[:max_results]
+    return matches[:max_results], total
 
 
 def query_by_edam_terms(
     edam_terms: list[str],
     max_results: int = 10,
-) -> list[BiotoolsMatch]:
+) -> tuple[list[BiotoolsMatch], int]:
     """Search for tools in bio.tools annotated with all of the given EDAM terms.
 
     bio.tools only combines filters of different categories, so at most one term per category is allowed.
@@ -103,7 +103,7 @@ def query_by_edam_terms(
         max_results: Maximum number of matches to return.
 
     Returns:
-        List of bio.tools tools annotated with all of the terms
+        Matched bio.tools tools annotated with all of the terms, and the total number bio.tools reports
 
     Raises:
         ValueError: If a URI is not an EDAM topic, operation, data or format concept,
@@ -122,5 +122,4 @@ def query_by_edam_terms(
 
     matches: list[BiotoolsMatch] = []
     total = _search(params, max_results, matches, set())
-    logger.info(f"There are {total} tools in bio.tools for the given EDAM terms, displaying at most {max_results}")
-    return matches[:max_results]
+    return matches[:max_results], total
