@@ -22,7 +22,7 @@ class BiotoolsSearcher:
 
                 name = d['name']
                 description = d['description']
-                biotools_link = f"https:://bio.tools/{_id}"
+                biotools_link = f"https://bio.tools/{_id}"
 
                 topic_list = list( map( lambda x: x['uri'], d['topic'] ))
                 
