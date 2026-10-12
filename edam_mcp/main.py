@@ -7,17 +7,15 @@ from fastmcp import FastMCP
 from fastmcp.server import Context
 
 from .config import settings
-
+from .models.biotools import BiotoolsQueryResponse, BiotoolsQueryTermsRequest, BiotoolsQueryTextRequest
 from .models.mapping import MappingRequest, MappingResponse
 from .models.segmentation import SegmentationRequest, SegmentationResponse
 from .models.suggestion import SuggestionRequest, SuggestionResponse
 from .models.workflow import WorkflowSummaryRequest, WorkflowSummaryResponse
-from .models.query import BiotoolsQueryTextRequest, BiotoolsQueryTermsRequest, BiotoolsQueryResponse
-
 from .tools import map_to_edam_concept, suggest_new_concept
+from .tools.biotools import query_biotools_by_edam_terms, query_biotools_by_text
 from .tools.segment_text import segment_text
 from .tools.workflow import get_workflow_summary
-from .tools.query_biotools import query_biotools_by_text, query_biotools_by_edam_terms
 
 # Configure logging
 logging.basicConfig(
@@ -58,13 +56,15 @@ def create_server() -> FastMCP:
         return await suggest_new_concept(request, context)
 
     @mcp.tool
-    async def query_biotools_database_by_text(request: BiotoolsQueryTextRequest, context: Context) -> BiotoolsQueryResponse:
-        """Query biotools database searching generically by a textual description for tools."""
+    async def query_biotools_by_text_tool(request: BiotoolsQueryTextRequest, context: Context) -> BiotoolsQueryResponse:
+        """Query biotools database for tools matching keywords or a tool name."""
         return await query_biotools_by_text(request, context)
 
     @mcp.tool
-    async def query_biotools_database_by_edam_terms(request: BiotoolsQueryTermsRequest, context: Context) -> BiotoolsQueryResponse:
-        """Query biotools database searching for tools given a list of EDAM concept URIs."""
+    async def query_biotools_by_edam_terms_tool(
+        request: BiotoolsQueryTermsRequest, context: Context
+    ) -> BiotoolsQueryResponse:
+        """Query biotools database for tools annotated with all the given EDAM concept URIs (at most one per category: topic, operation, data, format)."""
         return await query_biotools_by_edam_terms(request, context)
 
     return mcp

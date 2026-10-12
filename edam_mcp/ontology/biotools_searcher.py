@@ -1,140 +1,127 @@
 from time import sleep
-import logging
+
 import requests
-from ..models.query import BiotoolsHit
 
-logger = logging.getLogger(__name__)
+from ..models.biotools import BiotoolsMatch
 
-class BiotoolsSearcher:
-    def __init__(self):
-        self.filter_keys = { "topic": "topicID", "operation": "operationID", "data": "dataTypeID", "format": "dataFormatID" }
-    
-    def _explore_api_url(self, matches, url, tool_ids=[]):
-        r = requests.get(url, timeout=(3.05, 30) )
+API_URL = "https://bio.tools/api/t/"
+FILTER_KEYS = {"topic": "topicID", "operation": "operationID", "data": "dataTypeID", "format": "dataFormatID"}
+
+
+def _terms(items) -> dict[str, str]:
+    """Map EDAM term URI to label, deduplicated."""
+    return {x["uri"]: x.get("term") or "" for x in items or []}
+
+
+def _io_terms(functions: list[dict], key: str) -> tuple[dict[str, str], dict[str, str]]:
+    """Data and format terms of the inputs or outputs (key) of all functions."""
+    ios = [io for fn in functions for io in fn.get(key) or []]
+    formats = [f for io in ios for f in io.get("format") or []]
+    return _terms([io["data"] for io in ios if io.get("data")]), _terms(formats)
+
+
+def _to_match(tool: dict) -> BiotoolsMatch | None:
+    """Build a match from a bio.tools entry, or None if it has no EDAM annotations."""
+    functions = tool.get("function") or []
+    terms = {
+        "topic_terms": _terms(tool.get("topic")),
+        "operation_terms": _terms([op for fn in functions for op in fn.get("operation") or []]),
+    }
+    terms["input_data_terms"], terms["input_format_terms"] = _io_terms(functions, "input")
+    terms["output_data_terms"], terms["output_format_terms"] = _io_terms(functions, "output")
+
+    if not any(terms.values()):
+        return None
+
+    return BiotoolsMatch(
+        name=tool["name"],
+        description=tool.get("description") or "",
+        biotools_link=f"https://bio.tools/{tool['biotoolsID']}",
+        **terms,
+    )
+
+
+def _search(params: dict, max_results: int, matches: list[BiotoolsMatch], seen: set[str]) -> int:
+    """Page through bio.tools results for params, appending new annotated matches to matches.
+
+    Returns the total number of tools bio.tools reports for the query.
+    """
+    page = 1
+    while True:
+        r = requests.get(
+            API_URL,
+            params={**params, "format": "json", "per_page": 100, "page": page},
+            timeout=(3.05, 30),
+        )
         r.raise_for_status()
         data = r.json()
-        next_page = data['next']
 
-        for d in data['list']:
-            _id = d['biotoolsID']
-            if( _id not in tool_ids ):
-                tool_ids.add(_id)
+        for tool in data["list"]:
+            if tool["biotoolsID"] in seen:
+                continue
+            seen.add(tool["biotoolsID"])
+            match = _to_match(tool)
+            if match:
+                matches.append(match)
 
-                name = d['name']
-                description = d['description']
-                biotools_link = f"https://bio.tools/{_id}"
+        if len(matches) >= max_results or not data.get("next"):
+            return data["count"]
+        page += 1
+        sleep(1)  # be polite to the bio.tools API between pages
 
-                topic_list = list( map( lambda x: x['uri'], d['topic'] ))
-                
-                data_list = []
-                format_list = []
-                operation_list = [] 
-                function_elements = d['function']
-                for fel in function_elements:
-                    if( "operation" in fel ):
-                        operation_list += list( map( lambda x: x['uri'], fel['operation'] ))
-                    
-                    if( "input" in fel ):
-                        inputs = fel['input']
-                        for el in inputs:
-                            data_list += [ el['data']['uri'] ]
-                            format_list += list( map( lambda x: x['uri'], el['format'] ))
-                    
-                    if( "output" in fel ):
-                        outputs = fel['output']
-                        for el in outputs:
-                            data_list += [ el['data']['uri'] ]
-                            format_list += list( map( lambda x: x['uri'], el['format'] ))
-                
-                if( (len(topic_list) > 0) or (len(operation_list) > 0) or (len(data_list) > 0) or (len(format_list) > 0) ):
-                    h = BiotoolsHit(
-                        name = name,
-                        description = description,
-                        biotools_link = biotools_link,
-                        topic_terms = list(set(topic_list)),
-                        operation_terms = list(set(operation_list)),
-                        data_terms = list(set(data_list)),
-                        format_terms = list(set(format_list)),
-                    )
-                matches.append(h)
-                sleep(1)
 
-        return next_page, matches, tool_ids
+def query_by_text(
+    seed: str,
+    max_results: int = 10,
+) -> tuple[list[BiotoolsMatch], int]:
+    """Search for tools in bio.tools matching the keywords in seed, ranked by bio.tools relevance.
 
-    def query_by_text(
-        self, 
-        seed: str,
-        max_results: int = 10,
-    ) -> list[BiotoolsHit]:
-        """Search for a tool in Biotools database using a keyword as seed that is a textual description
+    Only tools annotated with at least one EDAM term are returned.
 
-        Args:
-            seed: Textual keyword to search in tool names and descriptions.
-            max_results: Maximum number of matches to return.
+    Args:
+        seed: Keywords or tool name to search in bio.tools.
+        max_results: Maximum number of matches to return.
 
-        Returns:
-            List of Biotools tools that matched the keyword
-        """
+    Returns:
+        Matched bio.tools tools, and the total number of tools bio.tools reports for the query
+    """
+    matches: list[BiotoolsMatch] = []
+    total = _search({"q": seed, "sort": "score"}, max_results, matches, set())
+    return matches[:max_results], total
 
-        tool_ids = set()
 
-        matches = []
-        url = f"https://bio.tools/api/t/?q=%22{seed}%22&format=json&per_page=100"
-        r = requests.get(url, timeout=(3.05, 30) )
-        r.raise_for_status()
-        data = r.json()
-        total = data['count']
-        next_page = data['next']
-        next_page, matches, tool_ids = self._explore_api_url( matches, url, tool_ids)
+def query_by_edam_terms(
+    edam_terms: list[str],
+    max_results: int = 10,
+) -> tuple[list[BiotoolsMatch], int]:
+    """Search for tools in bio.tools annotated with all of the given EDAM terms.
 
-        while( (len(matches) < max_results) and (next_page is not None) ):
-            url_search = f"{url}{next_page}"
-            next_page, matches, tool_ids = self._explore_api_url( matches, url_search, tool_ids)
+    bio.tools only combines filters of different categories, so at most one term per category is allowed.
 
-        logger.info(f"There are {total} tools in bio.tools related to your keyword, displaying only {max_results}")
+    Args:
+        edam_terms: EDAM concept URIs (topic, operation, data or format), at most one per category.
+        max_results: Maximum number of matches to return.
 
-        return matches[:max_results]
+    Returns:
+        Matched bio.tools tools annotated with all of the terms, and the total number bio.tools reports
 
-    def _solve_edam_category_url(self, uri):
-        term = uri.split("/")[-1]
+    Raises:
+        ValueError: If a URI is not an EDAM topic, operation, data or format concept,
+            or two terms share a category.
+    """
+    params: dict[str, str] = {}
+    for uri in edam_terms:
+        term = uri.rstrip("/").split("/")[-1]
         category = term.split("_")[0]
-        filter_parameter = self.filter_keys[category]
-        url_search = f"https://bio.tools/api/t/?{filter_parameter}={term}&format=json&per_page=100"
-        
-        return url_search
+        if category not in FILTER_KEYS:
+            raise ValueError(f"Not an EDAM topic/operation/data/format URI: {uri}")
+        key = FILTER_KEYS[category]
+        # Quoted for an exact match; unquoted, bio.tools does a loose text match on the ID
+        if params.setdefault(key, f'"{term}"') != f'"{term}"':
+            raise ValueError(
+                f'bio.tools can only combine one {category} term per query, got {params[key]} and "{term}"'
+            )
 
-    def query_by_edam_terms(
-        self, 
-        edam_terms: list[str],
-        max_results: int = 10,
-    ) -> list[BiotoolsHit]:
-        """Search for a tool in Biotools database using a list of mapped EDAM URI terms
-
-        Args:
-            seed: A list of EDAM concept URIs to search in tool names and descriptions.
-            max_results: Maximum number of matches to return.
-
-        Returns:
-            List of Biotools tools that matched the keyword
-        """
-
-        tool_ids = set()
-
-        matches = []
-        for uri in set(edam_terms):
-            url = self._solve_edam_category_url(uri)
-
-            r = requests.get(url, timeout=(3.05, 30) )
-            r.raise_for_status()
-            data = r.json()
-            total = data['count']
-            next_page = data['next']
-            next_page, matches, tool_ids = self._explore_api_url( matches, url, tool_ids )
-
-            while( (len(matches) < max_results) and (next_page is not None) ):
-                url_search = f"{url}{next_page}"
-                next_page, matches, tool_ids = self._explore_api_url( matches, url_search, tool_ids)
-
-        logger.info(f"There are {total} tools in bio.tools related to your keyword, displaying only {max_results}")
-
-        return matches[:max_results]
+    matches: list[BiotoolsMatch] = []
+    total = _search(params, max_results, matches, set())
+    return matches[:max_results], total
