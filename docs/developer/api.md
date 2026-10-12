@@ -114,7 +114,7 @@ for suggestion in response.suggestions:
 
 ### `query_biotools_by_text`
 
-Searches [bio.tools](https://bio.tools) for tools matching keywords or a tool name, ranked by relevance. Results skip tools without EDAM annotations.
+Searches [bio.tools](https://bio.tools) for tools matching keywords or a tool name, ranked by relevance. Tools without EDAM annotations come back with empty term fields.
 
 #### Request
 
@@ -129,7 +129,7 @@ class BiotoolsQueryTextRequest(BaseModel):
 ```python
 class BiotoolsQueryResponse(BaseModel):
     matches: List[BiotoolsMatch]       # Matched tools
-    total_matches: int                 # Total bio.tools reports, before skipping and truncating
+    total_matches: int                 # Total bio.tools reports, before truncating to max_results
 
 class BiotoolsMatch(BaseModel):
     name: str                          # Tool name

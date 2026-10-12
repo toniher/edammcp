@@ -68,5 +68,5 @@ class BiotoolsQueryResponse(BaseModel):
 
     total_matches: int = Field(
         ...,
-        description="Total number of tools bio.tools reports for the query, including unannotated ones and those beyond max_results",
+        description="Total number of tools bio.tools reports for the query, including those beyond max_results",
     )
