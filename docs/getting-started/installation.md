@@ -241,6 +241,8 @@ Once connected, test the available tools:
 
 - `map_to_edam_concept`: Map descriptions to EDAM concepts
 - `suggest_new_concept`: Suggest new concepts
+- `query_biotools_by_text`: Find bio.tools tools by keywords or name
+- `query_biotools_by_edam_terms`: Find bio.tools tools annotated with given EDAM terms
 
 ## 🔧 Troubleshooting
 
