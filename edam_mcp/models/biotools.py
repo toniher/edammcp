@@ -8,9 +8,9 @@ class BiotoolsQueryTextRequest(BaseModel):
 
     seed: str = Field(
         ...,
-        description="Search textual keyword to search in tool names and descriptions.",
+        description="Keywords or tool name to search in bio.tools",
         min_length=1,
-        max_length=10000,
+        max_length=200,
     )
 
     max_results: int = Field(10, ge=1, le=100, description="Maximum number of matches to return")

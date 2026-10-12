@@ -73,19 +73,19 @@ def query_by_text(
     seed: str,
     max_results: int = 10,
 ) -> list[BiotoolsMatch]:
-    """Search for tools in bio.tools whose name or description contains the exact phrase seed.
+    """Search for tools in bio.tools matching the keywords in seed, ranked by bio.tools relevance.
 
     Only tools annotated with at least one EDAM term are returned.
 
     Args:
-        seed: Textual phrase to search in tool names and descriptions.
+        seed: Keywords or tool name to search in bio.tools.
         max_results: Maximum number of matches to return.
 
     Returns:
-        List of bio.tools tools that matched the phrase
+        List of bio.tools tools that matched the keywords
     """
     matches: list[BiotoolsMatch] = []
-    total = _search({"q": f'"{seed}"'}, max_results, matches, set())
+    total = _search({"q": seed, "sort": "score"}, max_results, matches, set())
     logger.info(f"There are {total} tools in bio.tools related to your keyword, displaying at most {max_results}")
     return matches[:max_results]
 

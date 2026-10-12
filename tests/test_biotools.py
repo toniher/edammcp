@@ -86,7 +86,8 @@ class TestQueryBiotools:
         ]
         # seed goes through params (so it is URL-encoded) and pagination advances
         assert [c.kwargs["params"]["page"] for c in fake_api.call_args_list] == [1, 2]
-        assert fake_api.call_args.kwargs["params"]["q"] == '"a&b=c"'
+        assert fake_api.call_args.kwargs["params"]["q"] == "a&b=c"
+        assert fake_api.call_args.kwargs["params"]["sort"] == "score"
 
     def test_stops_at_max_results(self, fake_api):
         assert len(query_by_text("x", max_results=1)) == 1

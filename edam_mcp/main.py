@@ -57,7 +57,7 @@ def create_server() -> FastMCP:
 
     @mcp.tool
     async def query_biotools_by_text_tool(request: BiotoolsQueryTextRequest, context: Context) -> BiotoolsQueryResponse:
-        """Query biotools database searching generically by a textual description for tools."""
+        """Query biotools database for tools matching keywords or a tool name."""
         return await query_biotools_by_text(request, context)
 
     @mcp.tool
