@@ -1,3 +1,4 @@
+import re
 from time import sleep
 
 import requests
@@ -9,6 +10,7 @@ EDAM_LOADER = OntologyLoader()
 EDAM_LOADER.load_ontology()
 
 API_URL = "https://bio.tools/api/t/"
+EDAM_URI = re.compile(r"https?://edamontology\.org/((topic|operation|data|format)_\d+)")
 FILTER_KEYS = {"topic": "topicID", "operation": "operationID", "data": "dataTypeID", "format": "dataFormatID"}
 
 
@@ -23,8 +25,8 @@ def _io_terms(functions: list[dict], key: str) -> tuple[dict[str, str], dict[str
     return _terms([io["data"] for io in ios if io.get("data")]), _terms(formats)
 
 
-def _to_match(tool: dict) -> BiotoolsMatch | None:
-    """Build a match from a bio.tools entry, or None if it has no EDAM annotations."""
+def _to_match(tool: dict) -> BiotoolsMatch:
+    """Build a match from a bio.tools entry; term fields stay empty for unannotated tools."""
     functions = tool.get("function") or []
     terms = {
         "topic_terms": _terms(tool.get("topic")),
@@ -32,9 +34,6 @@ def _to_match(tool: dict) -> BiotoolsMatch | None:
     }
     terms["input_data_terms"], terms["input_format_terms"] = _io_terms(functions, "input")
     terms["output_data_terms"], terms["output_format_terms"] = _io_terms(functions, "output")
-
-    if not any(terms.values()):
-        return None
 
     return BiotoolsMatch(
         name=tool["name"],
@@ -45,7 +44,7 @@ def _to_match(tool: dict) -> BiotoolsMatch | None:
 
 
 def _search(params: dict, max_results: int, matches: list[BiotoolsMatch], seen: set[str]) -> int:
-    """Page through bio.tools results for params, appending new annotated matches to matches.
+    """Page through bio.tools results for params, appending new matches to matches.
 
     Returns the total number of tools bio.tools reports for the query.
     """
@@ -63,9 +62,7 @@ def _search(params: dict, max_results: int, matches: list[BiotoolsMatch], seen: 
             if tool["biotoolsID"] in seen:
                 continue
             seen.add(tool["biotoolsID"])
-            match = _to_match(tool)
-            if match:
-                matches.append(match)
+            matches.append(_to_match(tool))
 
         if len(matches) >= max_results or not data.get("next"):
             return data["count"]
@@ -78,7 +75,7 @@ def query_by_text(
 ) -> tuple[list[BiotoolsMatch], int]:
     """Search for tools in bio.tools matching the keywords in seed, ranked by bio.tools relevance.
 
-    Only tools annotated with at least one EDAM term are returned.
+    Tools without EDAM annotations are returned with empty term fields.
 
     Args:
         seed: Keywords or tool name to search in bio.tools.
@@ -176,10 +173,10 @@ def query_by_edam_terms(
 
     params: dict[str, str] = {}
     for uri in edam_terms:
-        term = uri.rstrip("/").split("/")[-1]
-        category = term.split("_")[0]
-        if category not in FILTER_KEYS:
+        m = EDAM_URI.fullmatch(uri)
+        if not m:
             raise ValueError(f"Not an EDAM topic/operation/data/format URI: {uri}")
+        term, category = m.groups()
         key = FILTER_KEYS[category]
         # Quoted for an exact match; unquoted, bio.tools does a loose text match on the ID
         if params.setdefault(key, f'"{term}"') != f'"{term}"':

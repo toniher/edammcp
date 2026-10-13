@@ -84,6 +84,8 @@ class TestQueryBiotools:
 
         assert isinstance(result, BiotoolsQueryResponse)
         assert result.matches == [
+            # kept, so an agent can tell a registered tool without EDAM terms from a missing one
+            BiotoolsMatch(name="unannotated", description="", biotools_link="https://bio.tools/unannotated"),
             BiotoolsMatch(
                 name="tool_a",
                 description="",
@@ -115,7 +117,7 @@ class TestQueryBiotools:
         request = BiotoolsQueryTermsRequest(edam_terms=[TOPIC, DATA])
         result = await query_biotools_by_edam_terms(request, MockContext())
 
-        assert [m.name for m in result.matches] == ["tool_a", "tool_b"]
+        assert [m.name for m in result.matches] == ["unannotated", "tool_a", "tool_b"]
         # AND: both filters go in the same request
         params = fake_api.call_args_list[0].kwargs["params"]
         assert (params["topicID"], params["dataTypeID"]) == ('"topic_3510"', '"data_1361"')
@@ -123,7 +125,13 @@ class TestQueryBiotools:
     def test_invalid_terms(self):
         with pytest.raises(ValidationError):
             BiotoolsQueryTermsRequest(edam_terms=[])
-        with pytest.raises(ValueError, match="Not an EDAM"):
-            query_by_edam_terms(["http://edamontology.org/identifier_1"])
+        for uri in [
+            "http://edamontology.org/identifier_1",
+            "https://example.com/topic_3510",
+            "not-a-uri/topic_3510",
+            "http://edamontology.org/topic_bad",
+        ]:
+            with pytest.raises(ValueError, match="Not an EDAM"):
+                query_by_edam_terms([uri])
         with pytest.raises(ValueError, match="one topic term"):
             query_by_edam_terms([TOPIC, "http://edamontology.org/topic_0160"])
