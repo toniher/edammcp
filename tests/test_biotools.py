@@ -10,9 +10,10 @@ from edam_mcp.models.biotools import (
     BiotoolsQueryResponse,
     BiotoolsQueryTermsRequest,
     BiotoolsQueryTextRequest,
+    BiotoolsQueryExactRequest
 )
 from edam_mcp.ontology.biotools_searcher import query_by_edam_terms, query_by_text
-from edam_mcp.tools.biotools import query_biotools_by_edam_terms, query_biotools_by_text
+from edam_mcp.tools.biotools import query_biotools_by_edam_terms, query_biotools_by_text, query_biotools_by_text_exact_match_tool, query_by_text_exact_match
 from edam_mcp.utils.context import MockContext
 
 TOPIC = "http://edamontology.org/topic_3510"

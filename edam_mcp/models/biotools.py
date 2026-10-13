@@ -15,6 +15,24 @@ class BiotoolsQueryTextRequest(BaseModel):
 
     max_results: int = Field(10, ge=1, le=100, description="Maximum number of matches to return")
 
+class BiotoolsQueryExactRequest(BaseModel):
+    """Request model for biotools query by text with exact match."""
+
+    name: str = Field(
+        None,
+        description="Tool name to search in bio.tools",
+        min_length=1,
+        max_length=200,
+    )
+
+    biotools_id: str = Field(
+        None,
+        description="BioTools normalized identifier to search in bio.tools",
+        min_length=1,
+        max_length=200,
+    )
+
+    max_results: int = Field(10, ge=1, le=100, description="Maximum number of matches to return")
 
 class BiotoolsQueryTermsRequest(BaseModel):
     """Request model for biotools query by EDAM terms."""
@@ -38,25 +56,25 @@ class BiotoolsMatch(BaseModel):
 
     biotools_link: str = Field(..., description="Tool link in biotools")
 
-    topic_terms: dict[str, str] = Field(default_factory=dict, description="EDAM topic terms of the tool, URI to label")
+    topic_terms: dict[str, dict] = Field(default_factory=dict, description="EDAM topic terms of the tool, URI to label")
 
-    operation_terms: dict[str, str] = Field(
+    operation_terms: dict[str, dict] = Field(
         default_factory=dict, description="EDAM operation terms of the tool functions, URI to label"
     )
 
-    input_data_terms: dict[str, str] = Field(
+    input_data_terms: dict[str, dict] = Field(
         default_factory=dict, description="EDAM data terms of the tool inputs, URI to label"
     )
 
-    input_format_terms: dict[str, str] = Field(
+    input_format_terms: dict[str, dict] = Field(
         default_factory=dict, description="EDAM format terms of the tool inputs, URI to label"
     )
 
-    output_data_terms: dict[str, str] = Field(
+    output_data_terms: dict[str, dict] = Field(
         default_factory=dict, description="EDAM data terms of the tool outputs, URI to label"
     )
 
-    output_format_terms: dict[str, str] = Field(
+    output_format_terms: dict[str, dict] = Field(
         default_factory=dict, description="EDAM format terms of the tool outputs, URI to label"
     )
 

@@ -2,7 +2,7 @@ import asyncio
 
 from fastmcp.server import Context
 
-from ..models.biotools import BiotoolsQueryResponse, BiotoolsQueryTermsRequest, BiotoolsQueryTextRequest
+from ..models.biotools import BiotoolsQueryResponse, BiotoolsQueryTermsRequest, BiotoolsQueryTextRequest, BiotoolsQueryExactRequest
 from ..ontology import biotools_searcher
 
 
@@ -25,6 +25,35 @@ async def query_biotools_by_text(
     try:
         context.info(f"Query keyword: {request.seed[:100]}...")
         matches, total = await asyncio.to_thread(biotools_searcher.query_by_text, request.seed, request.max_results)
+        context.info(f"Found {total} tools, returning {len(matches)}")
+        return BiotoolsQueryResponse(matches=matches, total_matches=total)
+
+    except Exception as e:
+        context.error(f"Error in biotools query: {e}")
+        raise
+
+
+async def query_biotools_by_text_exact_match(
+    request: BiotoolsQueryExactRequest,
+    context: Context,
+) -> BiotoolsQueryResponse:
+    """Search for tools in Biotools repository by seraching exactly the tool name or the biotools tool identifier.
+
+    This tool takes a tool name and/or the biotools id of the tool and retrieves the corresponding tool information. It returns the match
+    with name, description, biotools database url, and EDAM terms (URI to label) for topics, operations, and input and output data and formats.
+
+    Args:
+        request: Biotools query request containing tool name and/or biotools id and parameters.
+        context: MCP context for logging and progress reporting.
+
+    Returns:
+        Biotools query response with matching tools and their associated EDAM terms.
+    """
+    try:
+        context.info(f"Query tool name: {request.name}")
+        context.info(f"Query tool identifier: {request.biotools_id}")
+
+        matches, total = await asyncio.to_thread(biotools_searcher.query_by_text_exact_match, request.name, request.biotools_id, request.max_results)
         context.info(f"Found {total} tools, returning {len(matches)}")
         return BiotoolsQueryResponse(matches=matches, total_matches=total)
 
