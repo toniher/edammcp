@@ -88,21 +88,6 @@ def query_by_text(
     total = _search({"q": seed, "sort": "score"}, max_results, matches, set())
     return matches[:max_results], total
 
-
-def _filter_valid_edam_terms(user_uris):
-    valid = set(EDAM_LOADER.concepts).intersection( set(user_uris) )
-
-    # Children expansion
-    for v in valid:
-        children = EDAM_LOADER.concepts.get(v).get("children")
-
-        # Filter suggestion to remove obsolete terms in the expansion
-        children = list( filter( lambda x: not EDAM_LOADER.concepts.get(x).get("obsolete"), children ))
-        
-        valid.update( children )
-
-    return valid
-
 def query_by_text_exact_match(
     name: str = None,
     biotools_id: str = None,
@@ -122,7 +107,7 @@ def query_by_text_exact_match(
     """
     params = {}
     if( name is not None ):
-        params["name"] = name
+        params["name"] = f'"{name}"'
     if( biotools_id is not None ):
         params["biotoolsID"] = biotools_id
     
@@ -137,6 +122,8 @@ def query_by_text_exact_match(
 def _filter_valid_edam_terms(user_uris):
     valid = set(EDAM_LOADER.concepts).intersection( set(user_uris) )
 
+    expanded = valid.copy()
+
     # Children expansion
     for v in valid:
         children = EDAM_LOADER.concepts.get(v).get("children")
@@ -144,9 +131,9 @@ def _filter_valid_edam_terms(user_uris):
         # Filter suggestion to remove obsolete terms in the expansion
         children = list( filter( lambda x: not EDAM_LOADER.concepts.get(x).get("obsolete"), children ))
         
-        valid.update( children )
+        expanded.update( children )
 
-    return valid
+    return expanded
 
 def query_by_edam_terms(
     edam_terms: list[str],
@@ -167,10 +154,12 @@ def query_by_edam_terms(
         ValueError: If a URI is not an EDAM topic, operation, data or format concept,
             or two terms share a category.
     """
-    edam_terms = _filter_valid_edam_terms()
-    if( len(valid) == 0 ):
+    edam_terms = _filter_valid_edam_terms(edam_terms)
+    if( len(edam_terms) == 0 ):
         raise ValueError("The input URIs do not correspond to valid terms in EDAM ontology")
 
+    # Version combining each term of a distinct category to refine results, but bio.tools api does not accept multipe item of each
+    """
     params: dict[str, str] = {}
     for uri in edam_terms:
         m = EDAM_URI.fullmatch(uri)
@@ -183,7 +172,18 @@ def query_by_edam_terms(
             raise ValueError(
                 f'bio.tools can only combine one {category} term per query, got {params[key]} and "{term}"'
             )
+    """
 
+    # Version overcoming limitation in bio.tools API and amplifying coverage
+    seen: set[str] = set()
     matches: list[BiotoolsMatch] = []
-    total = _search(params, max_results, matches, set())
+    for uri in edam_terms:
+        m = EDAM_URI.fullmatch(uri)
+        if not m:
+            raise ValueError(f"Not an EDAM topic/operation/data/format URI: {uri}")
+        term, category = m.groups()
+        key = FILTER_KEYS[category]
+        params: dict[str, str] = {key: f'"{term}"' } 
+        total = _search(params, max_results, matches, seen)
+
     return matches[:max_results], total
