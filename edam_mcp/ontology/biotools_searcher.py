@@ -120,13 +120,13 @@ def query_by_text_exact_match(
     Returns:
         Matched bio.tools tools, and the total number of tools bio.tools reports for the query
     """
-    params = {"sort": "score"}
+    params = {}
     if( name is not None ):
         params["name"] = name
     if( biotools_id is not None ):
         params["biotoolsID"] = biotools_id
     
-    if( len(params) == 1 ):
+    if( len(params) == 0 ):
         raise ValueError("You must specify either the tool name or its database identifier")
 
     matches: list[BiotoolsMatch] = []

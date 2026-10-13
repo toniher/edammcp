@@ -12,8 +12,10 @@ from edam_mcp.models.biotools import (
     BiotoolsQueryTextRequest,
     BiotoolsQueryExactRequest
 )
-from edam_mcp.ontology.biotools_searcher import query_by_edam_terms, query_by_text
-from edam_mcp.tools.biotools import query_biotools_by_edam_terms, query_biotools_by_text, query_biotools_by_text_exact_match_tool, query_by_text_exact_match
+from edam_mcp.ontology.biotools_searcher import query_by_edam_terms, query_by_text, query_by_text_exact_match
+
+from edam_mcp.tools.biotools import query_biotools_by_edam_terms, query_biotools_by_text, query_biotools_by_text_exact_match_tool
+
 from edam_mcp.utils.context import MockContext
 
 TOPIC = "http://edamontology.org/topic_3510"
@@ -106,6 +108,15 @@ class TestQueryBiotools:
         assert [c.kwargs["params"]["page"] for c in fake_api.call_args_list] == [1, 2]
         assert fake_api.call_args.kwargs["params"]["q"] == "a&b=c"
         assert fake_api.call_args.kwargs["params"]["sort"] == "score"
+
+    @pytest.mark.asyncio
+    async def test_query_by_text_exact_match(self, fake_api):
+        request = BiotoolsQueryExactRequest(name="tool_a")
+        result = await query_by_text_exact_match (request, MockContext())
+
+        assert isinstance(result, BiotoolsQueryResponse)
+        assert result.total_matches == 1  # bio.tools count, not len(matches)
+        assert fake_api.call_args.kwargs["params"]["name"] == "tool_a"
 
     def test_stops_at_max_results(self, fake_api):
         matches, total = query_by_text("x", max_results=1)
