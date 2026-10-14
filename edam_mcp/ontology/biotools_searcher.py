@@ -3,8 +3,9 @@ from time import sleep
 
 import requests
 
-from ..models.biotools import BiotoolsMatch
 from edam_mcp.ontology.loader import OntologyLoader
+
+from ..models.biotools import BiotoolsMatch
 
 EDAM_LOADER = OntologyLoader()
 EDAM_LOADER.load_ontology()
@@ -16,7 +17,11 @@ FILTER_KEYS = {"topic": "topicID", "operation": "operationID", "data": "dataType
 
 def _terms(items) -> dict[str, str]:
     """Map EDAM term URI to label, deduplicated."""
-    return {x["uri"]: { "label": x.get("term"), "obsolete": EDAM_LOADER.concepts.get(x["uri"]).get("obsolete") } or "" for x in items or []}
+    return {
+        x["uri"]: {"label": x.get("term"), "obsolete": EDAM_LOADER.concepts.get(x["uri"]).get("obsolete")} or ""
+        for x in items or []
+    }
+
 
 def _io_terms(functions: list[dict], key: str) -> tuple[dict[str, str], dict[str, str]]:
     """Data and format terms of the inputs or outputs (key) of all functions."""
@@ -69,6 +74,7 @@ def _search(params: dict, max_results: int, matches: list[BiotoolsMatch], seen: 
         page += 1
         sleep(1)  # be polite to the bio.tools API between pages
 
+
 def query_by_text(
     seed: str,
     max_results: int = 10,
@@ -88,6 +94,7 @@ def query_by_text(
     total = _search({"q": seed, "sort": "score"}, max_results, matches, set())
     return matches[:max_results], total
 
+
 def query_by_text_exact_match(
     name: str = None,
     biotools_id: str = None,
@@ -106,21 +113,21 @@ def query_by_text_exact_match(
         Matched bio.tools tools, and the total number of tools bio.tools reports for the query
     """
     params = {}
-    if( name is not None ):
+    if name is not None:
         params["name"] = f'"{name}"'
-    if( biotools_id is not None ):
+    if biotools_id is not None:
         params["biotoolsID"] = biotools_id
-    
-    if( len(params) == 0 ):
+
+    if len(params) == 0:
         raise ValueError("You must specify either the tool name or its database identifier")
 
     matches: list[BiotoolsMatch] = []
-    total = _search( params, max_results, matches, set())
+    total = _search(params, max_results, matches, set())
     return matches[:max_results], total
 
 
 def _filter_valid_edam_terms(user_uris):
-    valid = set(EDAM_LOADER.concepts).intersection( set(user_uris) )
+    valid = set(EDAM_LOADER.concepts).intersection(set(user_uris))
 
     expanded = valid.copy()
 
@@ -129,11 +136,12 @@ def _filter_valid_edam_terms(user_uris):
         children = EDAM_LOADER.concepts.get(v).get("children")
 
         # Filter suggestion to remove obsolete terms in the expansion
-        children = list( filter( lambda x: not EDAM_LOADER.concepts.get(x).get("obsolete"), children ))
-        
-        expanded.update( children )
+        children = list(filter(lambda x: not EDAM_LOADER.concepts.get(x).get("obsolete"), children))
+
+        expanded.update(children)
 
     return expanded
+
 
 def query_by_edam_terms(
     edam_terms: list[str],
@@ -155,7 +163,7 @@ def query_by_edam_terms(
             or two terms share a category.
     """
     edam_terms = _filter_valid_edam_terms(edam_terms)
-    if( len(edam_terms) == 0 ):
+    if len(edam_terms) == 0:
         raise ValueError("The input URIs do not correspond to valid terms in EDAM ontology")
 
     # Version combining each term of a distinct category to refine results, but bio.tools api does not accept multipe item of each
@@ -183,7 +191,7 @@ def query_by_edam_terms(
             raise ValueError(f"Not an EDAM topic/operation/data/format URI: {uri}")
         term, category = m.groups()
         key = FILTER_KEYS[category]
-        params: dict[str, str] = {key: f'"{term}"' } 
+        params: dict[str, str] = {key: f'"{term}"'}
         total = _search(params, max_results, matches, seen)
 
     return matches[:max_results], total

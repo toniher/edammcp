@@ -15,6 +15,7 @@ class BiotoolsQueryTextRequest(BaseModel):
 
     max_results: int = Field(10, ge=1, le=100, description="Maximum number of matches to return")
 
+
 class BiotoolsQueryExactRequest(BaseModel):
     """Request model for biotools query by text with exact match."""
 
@@ -33,6 +34,7 @@ class BiotoolsQueryExactRequest(BaseModel):
     )
 
     max_results: int = Field(10, ge=1, le=100, description="Maximum number of matches to return")
+
 
 class BiotoolsQueryTermsRequest(BaseModel):
     """Request model for biotools query by EDAM terms."""

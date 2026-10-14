@@ -7,15 +7,17 @@ from pydantic import ValidationError
 
 from edam_mcp.models.biotools import (
     BiotoolsMatch,
+    BiotoolsQueryExactRequest,
     BiotoolsQueryResponse,
     BiotoolsQueryTermsRequest,
     BiotoolsQueryTextRequest,
-    BiotoolsQueryExactRequest
 )
-from edam_mcp.ontology.biotools_searcher import query_by_edam_terms, query_by_text, query_by_text_exact_match
-
-from edam_mcp.tools.biotools import query_biotools_by_edam_terms, query_biotools_by_text, query_biotools_by_text_exact_match
-
+from edam_mcp.ontology.biotools_searcher import query_by_edam_terms, query_by_text
+from edam_mcp.tools.biotools import (
+    query_biotools_by_edam_terms,
+    query_biotools_by_text,
+    query_biotools_by_text_exact_match,
+)
 from edam_mcp.utils.context import MockContext
 
 TOPIC = "http://edamontology.org/topic_3510"
@@ -92,15 +94,15 @@ class TestQueryBiotools:
                 name="tool_a",
                 description="",
                 biotools_link="https://bio.tools/tool_a",
-                topic_terms={TOPIC: {"label": "Phylogenetics", "obsolete": False } },
+                topic_terms={TOPIC: {"label": "Phylogenetics", "obsolete": False}},
             ),
             BiotoolsMatch(
                 name="tool_b",
                 description="",
                 biotools_link="https://bio.tools/tool_b",
-                input_data_terms={DATA: {"label": "Sequence motif", "obsolete": False } },
-                input_format_terms={FORMAT: {"label": None, "obsolete": False } },
-                output_format_terms={FORMAT: {"label": "FASTA", "obsolete": False } },
+                input_data_terms={DATA: {"label": "Sequence motif", "obsolete": False}},
+                input_format_terms={FORMAT: {"label": None, "obsolete": False}},
+                output_format_terms={FORMAT: {"label": "FASTA", "obsolete": False}},
             ),
         ]
         assert result.total_matches == 4  # bio.tools count, not len(matches)
@@ -131,8 +133,8 @@ class TestQueryBiotools:
         assert len(result.matches) == 3
 
         # AND: both filters go in the same request
-        #params = fake_api.call_args_list[0].kwargs["params"]
-        #assert params["dataTypeID"] == '"data_1361"'
+        # params = fake_api.call_args_list[0].kwargs["params"]
+        # assert params["dataTypeID"] == '"data_1361"'
 
     def test_invalid_terms(self):
         with pytest.raises(ValidationError):
@@ -146,5 +148,5 @@ class TestQueryBiotools:
             with pytest.raises(ValueError, match="The input URIs do not correspond to valid terms in EDAM ontology"):
                 query_by_edam_terms([uri])
 
-        #with pytest.raises(ValueError, match="one topic term"):
+        # with pytest.raises(ValueError, match="one topic term"):
         #    query_by_edam_terms([TOPIC, "http://edamontology.org/topic_0160"])
