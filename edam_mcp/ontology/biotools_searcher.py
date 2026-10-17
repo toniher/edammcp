@@ -13,10 +13,12 @@ API_URL = "https://bio.tools/api/t/"
 EDAM_URI = re.compile(r"https?://edamontology\.org/((topic|operation|data|format)_\d+)")
 FILTER_KEYS = {"topic": "topicID", "operation": "operationID", "data": "dataTypeID", "format": "dataFormatID"}
 
+def _is_obsolete(uri: str) -> bool:
+    return (EDAM_LOADER.concepts.get(uri) or {}).get("obsolete", True)
 
 def _terms(items) -> dict[str, str]:
     """Map EDAM term URI to label, deduplicated."""
-    return {x["uri"]: { "label": x.get("term"), "obsolete": EDAM_LOADER.concepts.get(x["uri"]).get("obsolete") } or "" for x in items or []}
+    return {x["uri"]: { "label": x.get("term"), "obsolete": _is_obsolete(x.get("uri")) } or "" for x in items or []}
 
 def _io_terms(functions: list[dict], key: str) -> tuple[dict[str, str], dict[str, str]]:
     """Data and format terms of the inputs or outputs (key) of all functions."""
@@ -69,6 +71,19 @@ def _search(params: dict, max_results: int, matches: list[BiotoolsMatch], seen: 
         page += 1
         sleep(1)  # be polite to the bio.tools API between pages
 
+def _search_by_id(biotools_id: str, matches: list[BiotoolsMatch]) -> int:
+    r = requests.get(
+            f"{API_URL}/{biotools_id}",
+            params={ "format": "json" },
+            timeout=(3.05, 30),
+        )
+    r.raise_for_status()
+    tool = r.json()
+    if( "biotoolsID" in tool ):
+        matches.append(_to_match(tool))
+        return 1
+    return 0
+
 def query_by_text(
     seed: str,
     max_results: int = 10,
@@ -88,51 +103,53 @@ def query_by_text(
     total = _search({"q": seed, "sort": "score"}, max_results, matches, set())
     return matches[:max_results], total
 
+def _sanitize_input(text):
+    return re.sub(r'[\'"]', '', text)
+
 def query_by_text_exact_match(
     name: str = None,
-    biotools_id: str = None,
-    max_results: int = 10,
+    biotools_id: str = None
 ) -> tuple[list[BiotoolsMatch], int]:
-    """Search for tools in bio.tools matching the name or the biotools_id identifier in the repository, ranked by bio.tools relevance.
-
-    Only tools annotated with at least one EDAM term are returned.
+    """Search for tools in bio.tools matching the name or the biotools_id identifier in the repository.
 
     Args:
         name: tool name to search in bio.tools.
         biotools_id: biotools tool identifier to search in bio.tools.
-        max_results: Maximum number of matches to return.
 
     Returns:
         Matched bio.tools tools, and the total number of tools bio.tools reports for the query
     """
+    max_results = 10
+
     params = {}
     if( name is not None ):
+        name = _sanitize_input(name)
         params["name"] = f'"{name}"'
     if( biotools_id is not None ):
-        params["biotoolsID"] = biotools_id
+        biotools_id = _sanitize_input(biotools_id)
+        params["biotoolsID"] = f'"{biotools_id}"'
     
     if( len(params) == 0 ):
         raise ValueError("You must specify either the tool name or its database identifier")
 
     matches: list[BiotoolsMatch] = []
-    total = _search( params, max_results, matches, set())
+    if("biotoolsID" in params and (len(params) == 1) ):
+        total = _search_by_id(biotools_id, matches)
+    else:
+        total = _search( params, max_results, matches, set())
+
     return matches[:max_results], total
 
 
 def _filter_valid_edam_terms(user_uris):
-    valid = set(EDAM_LOADER.concepts).intersection( set(user_uris) )
+    bad = [u for u in user_uris if _is_obsolete(u)]
+    if bad:
+        raise ValueError(f"Unknown or obsolete EDAM terms: { ', '.join(bad) }")
 
-    expanded = valid.copy()
-
+    expanded = set(user_uris)
     # Children expansion
-    for v in valid:
-        children = EDAM_LOADER.concepts.get(v).get("children")
-
-        # Filter suggestion to remove obsolete terms in the expansion
-        children = list( filter( lambda x: not EDAM_LOADER.concepts.get(x).get("obsolete"), children ))
-        
-        expanded.update( children )
-
+    for u in user_uris:
+        expanded.update(c for c in EDAM_LOADER.concepts[u]["children"] if not _is_obsolete(c))
     return expanded
 
 def query_by_edam_terms(

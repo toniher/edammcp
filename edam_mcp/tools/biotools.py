@@ -50,10 +50,9 @@ async def query_biotools_by_text_exact_match(
         Biotools query response with matching tools and their associated EDAM terms.
     """
     try:
-        context.info(f"Query tool name: {request.name}")
-        context.info(f"Query tool identifier: {request.biotools_id}")
+        context.info(f"Query information - Tool name: {request.name} | Tool identifier: {request.biotools_id}")
 
-        matches, total = await asyncio.to_thread(biotools_searcher.query_by_text_exact_match, request.name, request.biotools_id, request.max_results)
+        matches, total = await asyncio.to_thread(biotools_searcher.query_by_text_exact_match, request.name, request.biotools_id)
         context.info(f"Found {total} tools, returning {len(matches)}")
         return BiotoolsQueryResponse(matches=matches, total_matches=total)
 

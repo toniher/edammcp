@@ -60,7 +60,6 @@ PAGES = {
     },
 }
 
-
 def _fake_get(url, params, timeout):
     response = MagicMock()
     response.json.return_value = PAGES[params["page"]]
@@ -71,6 +70,45 @@ def _fake_get(url, params, timeout):
 def fake_api():
     with (
         patch("edam_mcp.ontology.biotools_searcher.requests.get", side_effect=_fake_get) as get,
+        patch("edam_mcp.ontology.biotools_searcher.sleep"),
+    ):
+        yield get
+
+EXACT_CASE_NAME = {
+        "count": 1,
+        "next": None,
+        "list": [
+            _tool("tool_a", topics=[TOPIC, TOPIC]),
+        ],
+    }
+EXACT_CASE_NAME_EMPTY = {
+        "count": 0,
+        "next": None,
+        "list": [],
+    }
+
+EXACT_CASE_ID = PAGES[2]["list"][1]
+
+def _fake_get_exact(url, params, timeout):
+    if("name" in params):
+        if( params["name"].find("bwa") == -1 ):
+            value = EXACT_CASE_NAME
+        else:
+            value = EXACT_CASE_NAME_EMPTY
+    else:
+        if( url.find("bwa") == -1 ):
+            value = EXACT_CASE_ID
+        else:
+            value = {"detail": "Not found."}
+
+    response = MagicMock()
+    response.json.return_value = value
+    return response
+
+@pytest.fixture
+def fake_api_exact():
+    with (
+        patch("edam_mcp.ontology.biotools_searcher.requests.get", side_effect=_fake_get_exact) as get,
         patch("edam_mcp.ontology.biotools_searcher.sleep"),
     ):
         yield get
@@ -110,12 +148,28 @@ class TestQueryBiotools:
         assert fake_api.call_args.kwargs["params"]["sort"] == "score"
 
     @pytest.mark.asyncio
-    async def test_query_by_text_exact_match(self):
+    async def test_query_by_text_exact_match(self, fake_api_exact):
+        request = BiotoolsQueryExactRequest(name="tool_a")
+        result = await query_biotools_by_text_exact_match(request, MockContext())
+        assert isinstance(result, BiotoolsQueryResponse)
+        assert result.total_matches == 1
+        assert result.matches[0].name == "tool_a"
+
+        request = BiotoolsQueryExactRequest(biotools_id="tool_b")
+        result = await query_biotools_by_text_exact_match(request, MockContext())
+        assert isinstance(result, BiotoolsQueryResponse)
+        assert result.total_matches == 1  
+        assert result.matches[0].name == "tool_b"
+
+        request = BiotoolsQueryExactRequest(biotools_id="bwa")
+        result = await query_biotools_by_text_exact_match(request, MockContext())
+        assert isinstance(result, BiotoolsQueryResponse)
+        assert result.total_matches == 0
+
         request = BiotoolsQueryExactRequest(name="bwa")
         result = await query_biotools_by_text_exact_match(request, MockContext())
-
         assert isinstance(result, BiotoolsQueryResponse)
-        assert result.total_matches == 1  # bio.tools count, not len(matches)
+        assert result.total_matches == 0
 
     def test_stops_at_max_results(self, fake_api):
         matches, total = query_by_text("x", max_results=1)
@@ -143,7 +197,7 @@ class TestQueryBiotools:
             "not-a-uri/topic_3510",
             "http://edamontology.org/topic_bad",
         ]:
-            with pytest.raises(ValueError, match="The input URIs do not correspond to valid terms in EDAM ontology"):
+            with pytest.raises(ValueError, match=f"Unknown or obsolete EDAM terms: {uri}"):
                 query_by_edam_terms([uri])
 
         #with pytest.raises(ValueError, match="one topic term"):

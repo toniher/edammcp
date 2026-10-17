@@ -1,6 +1,6 @@
 """Models for Biotools Query functionality."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class BiotoolsQueryTextRequest(BaseModel):
@@ -32,7 +32,12 @@ class BiotoolsQueryExactRequest(BaseModel):
         max_length=200,
     )
 
-    max_results: int = Field(10, ge=1, le=100, description="Maximum number of matches to return")
+    @model_validator(mode='after')
+    def check_input_presence(self):
+        flag = (self.name is not None) or (self.biotools_id is not None)
+        if(not flag):
+            raise ValueError("You must fill either the name or the biotools ID")
+        return self
 
 class BiotoolsQueryTermsRequest(BaseModel):
     """Request model for biotools query by EDAM terms."""
