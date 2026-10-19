@@ -1,4 +1,5 @@
 import re
+import threading
 from time import sleep
 
 import requests
@@ -8,6 +9,8 @@ from edam_mcp.ontology.loader import OntologyLoader
 from ..models.biotools import BiotoolsMatch
 
 EDAM_LOADER = OntologyLoader()
+_load_lock = threading.Lock()
+_loaded = False
 
 API_URL = "https://bio.tools/api/t/"
 EDAM_URI = re.compile(r"https?://edamontology\.org/((topic|operation|data|format)_\d+)")
@@ -15,8 +18,12 @@ FILTER_KEYS = {"topic": "topicID", "operation": "operationID", "data": "dataType
 
 def _is_obsolete(uri: str) -> bool:
     """True if uri is obsolete or unknown to EDAM. Loads the ontology on first use, retrying after a failure."""
-    if not EDAM_LOADER.concepts and not EDAM_LOADER.load_ontology():
-        raise RuntimeError("EDAM ontology could not be loaded")
+    global _loaded
+    with _load_lock:  # tools run in worker threads; readers wait until the load is complete
+        if not _loaded:
+            if not EDAM_LOADER.load_ontology():
+                raise RuntimeError("EDAM ontology could not be loaded")
+            _loaded = True
     return (EDAM_LOADER.concepts.get(uri) or {}).get("obsolete", True)
 
 

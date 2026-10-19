@@ -12,6 +12,7 @@ from edam_mcp.models.biotools import (
     BiotoolsQueryTermsRequest,
     BiotoolsQueryTextRequest,
 )
+from edam_mcp.ontology import biotools_searcher
 from edam_mcp.ontology.biotools_searcher import query_by_edam_terms, query_by_text
 from edam_mcp.tools.biotools import (
     query_biotools_by_edam_terms,
@@ -61,6 +62,16 @@ PAGES = {
         ],
     },
 }
+
+@pytest.fixture(autouse=True)
+def fake_edam(monkeypatch):
+    """Small in-memory EDAM so the tests never download or read the real ontology."""
+    uris = [TOPIC, DATA, FORMAT, "http://edamontology.org/topic_0160"]
+    concepts = {u: {"obsolete": False} for u in uris}
+    concepts["http://edamontology.org/topic_0001"] = {"obsolete": True}
+    monkeypatch.setattr(biotools_searcher.EDAM_LOADER, "concepts", concepts)
+    monkeypatch.setattr(biotools_searcher, "_loaded", True)
+
 
 def _fake_get(url, params, timeout):
     response = MagicMock()
@@ -206,3 +217,13 @@ class TestQueryBiotools:
 
         with pytest.raises(ValueError, match="one topic term"):
             query_by_edam_terms([TOPIC, "http://edamontology.org/topic_0160"])
+
+    def test_obsolete_terms(self):
+        obsolete = "http://edamontology.org/topic_0001"
+        with pytest.raises(ValueError, match="Unknown or obsolete"):
+            query_by_edam_terms([obsolete])
+        # in results, obsolete and unknown terms are flagged, valid ones are not
+        terms = biotools_searcher._terms(
+            [{"uri": obsolete, "term": "a"}, {"uri": "http://edamontology.org/topic_9999", "term": "b"}, {"uri": TOPIC}]
+        )
+        assert [t["obsolete"] for t in terms.values()] == [True, True, False]
