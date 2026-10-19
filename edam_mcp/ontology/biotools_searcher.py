@@ -117,7 +117,7 @@ def query_by_text(
 def query_by_text_exact_match(
     name: str | None = None, biotools_id: str | None = None
 ) -> tuple[list[BiotoolsMatch], int]:
-    """Search for tools in bio.tools matching the name or the biotools_id identifier in the repository.
+    """Search for tools in bio.tools matching the exact name and/or the biotools_id identifier.
 
     Args:
         name: tool name to search in bio.tools.
@@ -156,8 +156,9 @@ def query_by_edam_terms(
         Matched bio.tools tools annotated with all of the terms, and the total number bio.tools reports
 
     Raises:
-        ValueError: If a URI is not an EDAM topic, operation, data or format concept,
-            or two terms share a category.
+        ValueError: If a term is obsolete or unknown to EDAM, is not a topic, operation, data or format
+            concept, or shares a category with another term.
+        RuntimeError: If the EDAM ontology cannot be loaded.
     """
     bad = [u for u in edam_terms if _is_obsolete(u)]
     if bad:

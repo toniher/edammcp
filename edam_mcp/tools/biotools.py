@@ -3,10 +3,10 @@ import asyncio
 from fastmcp.server import Context
 
 from ..models.biotools import (
+    BiotoolsQueryExactRequest,
     BiotoolsQueryResponse,
     BiotoolsQueryTermsRequest,
     BiotoolsQueryTextRequest,
-    BiotoolsQueryExactRequest,
 )
 from ..ontology import biotools_searcher
 
@@ -18,7 +18,7 @@ async def query_biotools_by_text(
     """Search for tools in Biotools repository by keywords or tool name.
 
     This tool takes keywords or a tool name as seed and performs a query in the Biotools database, ranked by relevance. It returns matches
-    with name, description, biotools database url, and EDAM terms (URI to label) for topics, operations, and input and output data and formats.
+    with name, description, biotools database url, and EDAM terms (URI to label and obsolete flag) for topics, operations, and input and output data and formats.
 
     Args:
         request: Biotools query request containing search seed and parameters.
@@ -42,10 +42,10 @@ async def query_biotools_by_text_exact_match(
     request: BiotoolsQueryExactRequest,
     context: Context,
 ) -> BiotoolsQueryResponse:
-    """Search for tools in Biotools repository by seraching exactly the tool name or the biotools tool identifier.
+    """Search for tools in Biotools repository by searching exactly the tool name or the biotools tool identifier.
 
     This tool takes a tool name and/or the biotools id of the tool and retrieves the corresponding tool information. It returns the match
-    with name, description, biotools database url, and EDAM terms (URI to label) for topics, operations, and input and output data and formats.
+    with name, description, biotools database url, and EDAM terms (URI to label and obsolete flag) for topics, operations, and input and output data and formats.
 
     Args:
         request: Biotools query request containing tool name and/or biotools id and parameters.
@@ -75,7 +75,7 @@ async def query_biotools_by_edam_terms(
     """Search for tools in Biotools repository by EDAM terms.
 
     This tool takes EDAM concept URIs (at most one per category) and searches the Biotools database for tools annotated with all of them. It returns matches
-    with name, description, biotools database url, and EDAM terms (URI to label) for topics, operations, and input and output data and formats.
+    with name, description, biotools database url, and EDAM terms (URI to label and obsolete flag) for topics, operations, and input and output data and formats.
 
     Args:
         request: Biotools query request containing EDAM term URIs and parameters.

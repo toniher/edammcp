@@ -72,7 +72,7 @@ uv run edam-mcp
 
 ### Using with MCP Clients
 
-The server exposes six main tools:
+The server exposes seven main tools:
 
 1. **`map_to_edam_concept_tool`** - Maps descriptions to existing EDAM concepts
    - **Input**: Description text, context, confidence threshold
@@ -95,15 +95,20 @@ The server exposes six main tools:
 
 5. **`query_biotools_by_text_tool`** - Search [bio.tools](https://bio.tools) for tools matching keywords or a tool name
    - **Input**: Keywords or tool name, maximum number of results
-   - **Output**: Tools ranked by relevance, each with its EDAM terms (URI and label) for topics, operations, and input and output data and formats, plus the total count bio.tools reports
+   - **Output**: Tools ranked by relevance, each with its EDAM terms (URI, label and `obsolete` flag) for topics, operations, and input and output data and formats, plus the total count bio.tools reports
    - **Example**: "bwa" → BWA (operation "Read mapping", input format "FASTQ", output format "SAM")
 
-6. **`query_biotools_by_edam_terms_tool`** - Search bio.tools for tools annotated with all the given EDAM terms
+6. **`query_biotools_by_text_exact_match_tool`** - Look up a bio.tools entry by exact tool name and/or bio.tools ID
+   - **Input**: Tool name and/or bio.tools ID (at least one)
+   - **Output**: The matching tool (at most one, or none), with the same fields as `query_biotools_by_text_tool`
+   - **Example**: ID `bwa` → BWA; ID `no_such_tool` → no match
+
+7. **`query_biotools_by_edam_terms_tool`** - Search bio.tools for tools annotated with all the given EDAM terms
    - **Input**: Up to four EDAM term URIs, at most one each for topic, operation, data and format; maximum number of results
    - **Output**: Same as `query_biotools_by_text_tool`
    - **Example**: `topic_3510` and `data_1361` → motifStack, hfAIM
 
-Tools without EDAM annotations come back with empty term fields. The EDAM-term search matches each term exactly and does not include its subclasses.
+Tools without EDAM annotations come back with empty term fields. The `obsolete` flag is true for terms that are deprecated in, or missing from, the loaded EDAM release. The EDAM-term search rejects obsolete or unknown input terms, matches each term exactly and does not include its subclasses.
 
 ### MCP Client Integration
 

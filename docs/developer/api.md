@@ -135,12 +135,12 @@ class BiotoolsMatch(BaseModel):
     name: str                          # Tool name
     description: str                   # Tool description
     biotools_link: str                 # https://bio.tools/<biotoolsID>
-    topic_terms: Dict[str, str]        # EDAM URI -> label, for each category below
-    operation_terms: Dict[str, str]
-    input_data_terms: Dict[str, str]
-    input_format_terms: Dict[str, str]
-    output_data_terms: Dict[str, str]
-    output_format_terms: Dict[str, str]
+    topic_terms: Dict[str, dict]      # EDAM URI -> {"label": str | None, "obsolete": bool}
+    operation_terms: Dict[str, dict]
+    input_data_terms: Dict[str, dict]
+    input_format_terms: Dict[str, dict]
+    output_data_terms: Dict[str, dict]
+    output_format_terms: Dict[str, dict]
 ```
 
 #### Example Usage
@@ -153,6 +153,29 @@ response = await query_biotools_by_text(BiotoolsQueryTextRequest(seed="bwa", max
 
 for match in response.matches:
     print(match.name, list(match.output_format_terms.values()))
+```
+
+### `query_biotools_by_text_exact_match`
+
+Looks up a bio.tools entry by exact tool name and/or bio.tools ID. A name matches the whole name, so `BW` does not find `BWA`. With both fields, the entry must match both. An unknown ID or name gives zero matches. The response matches `query_biotools_by_text`.
+
+#### Request
+
+```python
+class BiotoolsQueryExactRequest(BaseModel):
+    name: str | None = None            # Exact tool name (1-200 characters)
+    biotools_id: str | None = None     # bio.tools ID, e.g. "bwa" (1-200 characters)
+```
+
+At least one field is required; a request with neither fails validation. Double and single quotes are removed from both values.
+
+#### Example Usage
+
+```python
+from edam_mcp.tools.biotools import query_biotools_by_text_exact_match
+from edam_mcp.models.biotools import BiotoolsQueryExactRequest
+
+response = await query_biotools_by_text_exact_match(BiotoolsQueryExactRequest(biotools_id="bwa"), context)
 ```
 
 ### `query_biotools_by_edam_terms`
@@ -179,7 +202,9 @@ request = BiotoolsQueryTermsRequest(
 response = await query_biotools_by_edam_terms(request, context)
 ```
 
-A URI outside topic, operation, data or format, or two terms in one category, raises `ValueError`.
+Each term in the response has an `obsolete` flag: true when the term is deprecated in, or missing from, the loaded EDAM release.
+
+The tool raises `ValueError` for a term that is obsolete or unknown to EDAM, a URI outside topic, operation, data and format, or two terms in one category. It raises `RuntimeError` if the EDAM ontology cannot be loaded.
 
 ## 📊 Models
 

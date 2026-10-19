@@ -19,14 +19,14 @@ class BiotoolsQueryTextRequest(BaseModel):
 class BiotoolsQueryExactRequest(BaseModel):
     """Request model for biotools query by text with exact match."""
 
-    name: str = Field(
+    name: str | None = Field(
         None,
         description="Tool name to search in bio.tools",
         min_length=1,
         max_length=200,
     )
 
-    biotools_id: str = Field(
+    biotools_id: str | None = Field(
         None,
         description="BioTools normalized identifier to search in bio.tools",
         min_length=1,

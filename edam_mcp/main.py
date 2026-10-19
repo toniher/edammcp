@@ -7,18 +7,16 @@ from fastmcp import FastMCP
 from fastmcp.server import Context
 
 from .config import settings
-
 from .models.biotools import (
+    BiotoolsQueryExactRequest,
     BiotoolsQueryResponse,
     BiotoolsQueryTermsRequest,
     BiotoolsQueryTextRequest,
-    BiotoolsQueryExactRequest,
 )
 from .models.mapping import MappingRequest, MappingResponse
 from .models.segmentation import SegmentationRequest, SegmentationResponse
 from .models.suggestion import SuggestionRequest, SuggestionResponse
 from .models.workflow import WorkflowSummaryRequest, WorkflowSummaryResponse
-
 from .tools import map_to_edam_concept, suggest_new_concept
 from .tools.biotools import query_biotools_by_edam_terms, query_biotools_by_text, query_biotools_by_text_exact_match
 from .tools.segment_text import segment_text
