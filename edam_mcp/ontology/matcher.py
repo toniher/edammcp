@@ -16,14 +16,13 @@ logger = logging.getLogger(__name__)
 class ConceptMatcher:
     """Handles semantic matching of descriptions to EDAM concepts."""
 
-    def __init__(self, ontology_loader: OntologyLoader, model_name: str = None):
+    def __init__(self, ontology_loader: OntologyLoader):
         """Initialize the concept matcher.
 
         Args:
             ontology_loader: Loaded ontology instance.
         """
         self.ontology_loader = ontology_loader
-        self.model_name = model_name
         self.embedding_model = None
         self.concept_embeddings: dict[str, np.ndarray] = {}
         self.use_chromadb = settings.use_chromadb
@@ -43,10 +42,7 @@ class ConceptMatcher:
 
         if self.embedding_model is None:
             # If none is defined 'all-MiniLM-L6-v2' is set
-            if( self.model_name is None ):
-                self.model_name = settings.embedding_model
-
-            self.embedding_model = SentenceTransformer( self.model_name )
+            self.embedding_model = SentenceTransformer(settings.embedding_model)
 
         if self.use_chromadb:
             try:

@@ -54,6 +54,8 @@ class OntologyLoader:
             self.concepts = pickle.load(f)
         with open(types_path, "rb") as f:
             self.concept_types = pickle.load(f)
+        if any("obsolete" not in c for c in self.concepts.values()):
+            raise ValueError("cache predates the 'obsolete' field")  # load_ontology rebuilds from the ontology
 
     def _save_cache(self):
         concepts_path, types_path, ts_path = self._cache_paths()

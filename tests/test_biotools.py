@@ -7,15 +7,17 @@ from pydantic import ValidationError
 
 from edam_mcp.models.biotools import (
     BiotoolsMatch,
+    BiotoolsQueryExactRequest,
     BiotoolsQueryResponse,
     BiotoolsQueryTermsRequest,
     BiotoolsQueryTextRequest,
-    BiotoolsQueryExactRequest
 )
-from edam_mcp.ontology.biotools_searcher import query_by_edam_terms, query_by_text, query_by_text_exact_match
-
-from edam_mcp.tools.biotools import query_biotools_by_edam_terms, query_biotools_by_text, query_biotools_by_text_exact_match
-
+from edam_mcp.ontology.biotools_searcher import query_by_edam_terms, query_by_text
+from edam_mcp.tools.biotools import (
+    query_biotools_by_edam_terms,
+    query_biotools_by_text,
+    query_biotools_by_text_exact_match,
+)
 from edam_mcp.utils.context import MockContext
 
 TOPIC = "http://edamontology.org/topic_3510"
@@ -103,6 +105,7 @@ def _fake_get_exact(url, params, timeout):
 
     response = MagicMock()
     response.json.return_value = value
+    response.status_code = 404 if "detail" in value else 200
     return response
 
 @pytest.fixture
@@ -160,6 +163,7 @@ class TestQueryBiotools:
         assert isinstance(result, BiotoolsQueryResponse)
         assert result.total_matches == 1  
         assert result.matches[0].name == "tool_b"
+        assert fake_api_exact.call_args.args[0] == "https://bio.tools/api/t/tool_b"
 
         request = BiotoolsQueryExactRequest(biotools_id="bwa")
         result = await query_biotools_by_text_exact_match(request, MockContext())
@@ -185,8 +189,8 @@ class TestQueryBiotools:
         assert len(result.matches) == 3
 
         # AND: both filters go in the same request
-        #params = fake_api.call_args_list[0].kwargs["params"]
-        #assert params["dataTypeID"] == '"data_1361"'
+        params = fake_api.call_args_list[0].kwargs["params"]
+        assert (params["topicID"], params["dataTypeID"]) == ('"topic_3510"', '"data_1361"')
 
     def test_invalid_terms(self):
         with pytest.raises(ValidationError):
@@ -200,5 +204,5 @@ class TestQueryBiotools:
             with pytest.raises(ValueError, match=f"Unknown or obsolete EDAM terms: {uri}"):
                 query_by_edam_terms([uri])
 
-        #with pytest.raises(ValueError, match="one topic term"):
-        #    query_by_edam_terms([TOPIC, "http://edamontology.org/topic_0160"])
+        with pytest.raises(ValueError, match="one topic term"):
+            query_by_edam_terms([TOPIC, "http://edamontology.org/topic_0160"])
