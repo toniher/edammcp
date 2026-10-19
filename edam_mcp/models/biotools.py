@@ -15,6 +15,7 @@ class BiotoolsQueryTextRequest(BaseModel):
 
     max_results: int = Field(10, ge=1, le=100, description="Maximum number of matches to return")
 
+
 class BiotoolsQueryExactRequest(BaseModel):
     """Request model for biotools query by text with exact match."""
 
@@ -32,12 +33,13 @@ class BiotoolsQueryExactRequest(BaseModel):
         max_length=200,
     )
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def check_input_presence(self):
         flag = (self.name is not None) or (self.biotools_id is not None)
-        if(not flag):
+        if not flag:
             raise ValueError("You must fill either the name or the biotools ID")
         return self
+
 
 class BiotoolsQueryTermsRequest(BaseModel):
     """Request model for biotools query by EDAM terms."""
@@ -61,26 +63,34 @@ class BiotoolsMatch(BaseModel):
 
     biotools_link: str = Field(..., description="Tool link in biotools")
 
-    topic_terms: dict[str, dict] = Field(default_factory=dict, description="EDAM topic terms of the tool, URI to label")
+    topic_terms: dict[str, dict] = Field(
+        default_factory=dict,
+        description="EDAM topic terms of the tool, URI to {label, obsolete}; obsolete also marks terms unknown to the loaded EDAM",
+    )
 
     operation_terms: dict[str, dict] = Field(
-        default_factory=dict, description="EDAM operation terms of the tool functions, URI to label"
+        default_factory=dict,
+        description="EDAM operation terms of the tool functions, URI to {label, obsolete}; obsolete also marks terms unknown to the loaded EDAM",
     )
 
     input_data_terms: dict[str, dict] = Field(
-        default_factory=dict, description="EDAM data terms of the tool inputs, URI to label"
+        default_factory=dict,
+        description="EDAM data terms of the tool inputs, URI to {label, obsolete}; obsolete also marks terms unknown to the loaded EDAM",
     )
 
     input_format_terms: dict[str, dict] = Field(
-        default_factory=dict, description="EDAM format terms of the tool inputs, URI to label"
+        default_factory=dict,
+        description="EDAM format terms of the tool inputs, URI to {label, obsolete}; obsolete also marks terms unknown to the loaded EDAM",
     )
 
     output_data_terms: dict[str, dict] = Field(
-        default_factory=dict, description="EDAM data terms of the tool outputs, URI to label"
+        default_factory=dict,
+        description="EDAM data terms of the tool outputs, URI to {label, obsolete}; obsolete also marks terms unknown to the loaded EDAM",
     )
 
     output_format_terms: dict[str, dict] = Field(
-        default_factory=dict, description="EDAM format terms of the tool outputs, URI to label"
+        default_factory=dict,
+        description="EDAM format terms of the tool outputs, URI to {label, obsolete}; obsolete also marks terms unknown to the loaded EDAM",
     )
 
 
