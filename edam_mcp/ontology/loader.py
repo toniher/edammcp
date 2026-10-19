@@ -52,11 +52,13 @@ class OntologyLoader:
         concepts_path, types_path, _ = self._cache_paths()
         with open(concepts_path, "rb") as f:
             concepts = pickle.load(f)
+        # Caches from before the deprecated flag existed must be rebuilt from the OWL;
+        # check before assigning so stale entries don't leak into the fallback parse
+        if any("deprecated" not in c for c in concepts.values()):
+            raise ValueError("cache lacks deprecated flag")
+        self.concepts = concepts
         with open(types_path, "rb") as f:
-            concept_types = pickle.load(f)
-        if any("obsolete" not in c for c in concepts.values()):
-            raise ValueError("cache predates the 'obsolete' field")  # load_ontology rebuilds from the ontology
-        self.concepts, self.concept_types = concepts, concept_types
+            self.concept_types = pickle.load(f)
 
     def _save_cache(self):
         concepts_path, types_path, ts_path = self._cache_paths()
@@ -78,6 +80,7 @@ class OntologyLoader:
                 logger.info("Loading concepts from cache")
                 try:
                     self._load_cache()
+                    self._drop_deprecated()
                     return True
                 except Exception as cache_exc:
                     logger.warning(f"Failed to load cache: {cache_exc}. Falling back to loading from ontology URL.")
@@ -95,14 +98,23 @@ class OntologyLoader:
             # Extract concepts
             self._extract_concepts()
 
-            logger.info(f"Successfully loaded {len(self.concepts)} concepts")
-
+            # The cache keeps deprecated concepts so toggling the setting needs no re-download
             self._save_cache()
+            self._drop_deprecated()
+
+            logger.info(f"Successfully loaded {len(self.concepts)} concepts")
             return True
 
         except Exception as e:
             logger.error(f"Failed to load ontology: {e}")
             return False
+
+    def _drop_deprecated(self) -> None:
+        if settings.include_deprecated:
+            return
+        kept = {uri: c for uri, c in self.concepts.items() if not c["deprecated"]}
+        logger.info(f"Skipping {len(self.concepts) - len(kept)} deprecated concepts")
+        self.concepts = kept
 
     def _extract_concepts(self) -> None:
         """Extract concept information from the loaded graph."""
@@ -144,18 +156,16 @@ class OntologyLoader:
             # Determine concept type from URI
             concept_type = self._determine_concept_type(str(concept_uri))
 
-            # Determine if a concept is obsolete
-            obsolete = self._get_literal_value(concept_uri, OWL.deprecated)
-
             return {
                 "uri": str(concept_uri),
                 "label": label,
                 "definition": definition,
                 "synonyms": synonyms,
                 "type": concept_type,
+                # Some releases add extra owl:deprecated values (e.g. "1.8" in EDAM 1.20), so check them all
+                "deprecated": "true" in self._get_literal_values(concept_uri, OWL.deprecated),
                 "parents": self._get_parent_concepts(concept_uri),
                 "children": self._get_child_concepts(concept_uri),
-                "obsolete": obsolete == "true",
             }
 
         except Exception as e:

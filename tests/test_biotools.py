@@ -67,8 +67,8 @@ PAGES = {
 def fake_edam(monkeypatch):
     """Small in-memory EDAM so the tests never download or read the real ontology."""
     uris = [TOPIC, DATA, FORMAT, "http://edamontology.org/topic_0160"]
-    concepts = {u: {"obsolete": False} for u in uris}
-    concepts["http://edamontology.org/topic_0001"] = {"obsolete": True}
+    concepts = {u: {"deprecated": False} for u in uris}
+    concepts["http://edamontology.org/topic_0001"] = {"deprecated": True}
     monkeypatch.setattr(biotools_searcher.EDAM_LOADER, "concepts", concepts)
     monkeypatch.setattr(biotools_searcher, "_loaded", True)
 

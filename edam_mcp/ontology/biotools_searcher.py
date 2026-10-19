@@ -24,7 +24,7 @@ def _is_obsolete(uri: str) -> bool:
             if not EDAM_LOADER.load_ontology():
                 raise RuntimeError("EDAM ontology could not be loaded")
             _loaded = True
-    return (EDAM_LOADER.concepts.get(uri) or {}).get("obsolete", True)
+    return (EDAM_LOADER.concepts.get(uri) or {}).get("deprecated", True)
 
 
 def _terms(items) -> dict[str, dict]:
