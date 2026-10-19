@@ -112,6 +112,100 @@ for suggestion in response.suggestions:
     print(f"{suggestion.suggested_label}: {suggestion.confidence:.2f}")
 ```
 
+### `query_biotools_by_text`
+
+Searches [bio.tools](https://bio.tools) for tools matching keywords or a tool name, ranked by relevance. Tools without EDAM annotations come back with empty term fields.
+
+#### Request
+
+```python
+class BiotoolsQueryTextRequest(BaseModel):
+    seed: str                          # Keywords or tool name (1-200 characters)
+    max_results: int = 10              # Maximum matches to return (1-100)
+```
+
+#### Response
+
+```python
+class BiotoolsQueryResponse(BaseModel):
+    matches: List[BiotoolsMatch]       # Matched tools
+    total_matches: int                 # Total bio.tools reports, before truncating to max_results
+
+class BiotoolsMatch(BaseModel):
+    name: str                          # Tool name
+    description: str                   # Tool description
+    biotools_link: str                 # https://bio.tools/<biotoolsID>
+    topic_terms: Dict[str, dict]      # EDAM URI -> {"label": str | None, "obsolete": bool}
+    operation_terms: Dict[str, dict]
+    input_data_terms: Dict[str, dict]
+    input_format_terms: Dict[str, dict]
+    output_data_terms: Dict[str, dict]
+    output_format_terms: Dict[str, dict]
+```
+
+#### Example Usage
+
+```python
+from edam_mcp.tools.biotools import query_biotools_by_text
+from edam_mcp.models.biotools import BiotoolsQueryTextRequest
+
+response = await query_biotools_by_text(BiotoolsQueryTextRequest(seed="bwa", max_results=3), context)
+
+for match in response.matches:
+    print(match.name, list(match.output_format_terms.values()))
+```
+
+### `query_biotools_by_text_exact_match`
+
+Looks up a bio.tools entry by exact tool name and/or bio.tools ID. A name matches the whole name, so `BW` does not find `BWA`. With both fields, the entry must match both. An unknown ID or name gives zero matches. The response matches `query_biotools_by_text`.
+
+#### Request
+
+```python
+class BiotoolsQueryExactRequest(BaseModel):
+    name: str | None = None            # Exact tool name (1-200 characters)
+    biotools_id: str | None = None     # bio.tools ID, e.g. "bwa" (1-200 characters)
+```
+
+At least one field is required; a request with neither fails validation. Double and single quotes are removed from both values.
+
+#### Example Usage
+
+```python
+from edam_mcp.tools.biotools import query_biotools_by_text_exact_match
+from edam_mcp.models.biotools import BiotoolsQueryExactRequest
+
+response = await query_biotools_by_text_exact_match(BiotoolsQueryExactRequest(biotools_id="bwa"), context)
+```
+
+### `query_biotools_by_edam_terms`
+
+Searches bio.tools for tools annotated with all the given EDAM terms. bio.tools combines filters only across categories, so the request takes at most one term each for topic, operation, data and format. Each term matches exactly, without its subclasses. The response matches `query_biotools_by_text`.
+
+#### Request
+
+```python
+class BiotoolsQueryTermsRequest(BaseModel):
+    edam_terms: List[str]              # 1-4 EDAM term URIs, at most one per category
+    max_results: int = 10              # Maximum matches to return (1-100)
+```
+
+#### Example Usage
+
+```python
+from edam_mcp.tools.biotools import query_biotools_by_edam_terms
+from edam_mcp.models.biotools import BiotoolsQueryTermsRequest
+
+request = BiotoolsQueryTermsRequest(
+    edam_terms=["http://edamontology.org/topic_3510", "http://edamontology.org/data_1361"]
+)
+response = await query_biotools_by_edam_terms(request, context)
+```
+
+Each term in the response has an `obsolete` flag: true when the term is deprecated in, or missing from, the loaded EDAM release.
+
+The tool raises `ValueError` for a term that is obsolete or unknown to EDAM, a URI outside topic, operation, data and format, or two terms in one category. It raises `RuntimeError` if the EDAM ontology cannot be loaded.
+
 ## 📊 Models
 
 ### Request Models
