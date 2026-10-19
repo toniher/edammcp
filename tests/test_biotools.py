@@ -63,6 +63,7 @@ PAGES = {
     },
 }
 
+
 @pytest.fixture(autouse=True)
 def fake_edam(monkeypatch):
     """Small in-memory EDAM so the tests never download or read the real ontology."""
@@ -87,29 +88,31 @@ def fake_api():
     ):
         yield get
 
+
 EXACT_CASE_NAME = {
-        "count": 1,
-        "next": None,
-        "list": [
-            _tool("tool_a", topics=[TOPIC, TOPIC]),
-        ],
-    }
+    "count": 1,
+    "next": None,
+    "list": [
+        _tool("tool_a", topics=[TOPIC, TOPIC]),
+    ],
+}
 EXACT_CASE_NAME_EMPTY = {
-        "count": 0,
-        "next": None,
-        "list": [],
-    }
+    "count": 0,
+    "next": None,
+    "list": [],
+}
 
 EXACT_CASE_ID = PAGES[2]["list"][1]
 
+
 def _fake_get_exact(url, params, timeout):
-    if("name" in params):
-        if( params["name"].find("bwa") == -1 ):
+    if "name" in params:
+        if params["name"].find("bwa") == -1:
             value = EXACT_CASE_NAME
         else:
             value = EXACT_CASE_NAME_EMPTY
     else:
-        if( url.find("bwa") == -1 ):
+        if url.find("bwa") == -1:
             value = EXACT_CASE_ID
         else:
             value = {"detail": "Not found."}
@@ -118,6 +121,7 @@ def _fake_get_exact(url, params, timeout):
     response.json.return_value = value
     response.status_code = 404 if "detail" in value else 200
     return response
+
 
 @pytest.fixture
 def fake_api_exact():
@@ -144,15 +148,15 @@ class TestQueryBiotools:
                 name="tool_a",
                 description="",
                 biotools_link="https://bio.tools/tool_a",
-                topic_terms={TOPIC: {"label": "Phylogenetics", "obsolete": False } },
+                topic_terms={TOPIC: {"label": "Phylogenetics", "obsolete": False}},
             ),
             BiotoolsMatch(
                 name="tool_b",
                 description="",
                 biotools_link="https://bio.tools/tool_b",
-                input_data_terms={DATA: {"label": "Sequence motif", "obsolete": False } },
-                input_format_terms={FORMAT: {"label": None, "obsolete": False } },
-                output_format_terms={FORMAT: {"label": "FASTA", "obsolete": False } },
+                input_data_terms={DATA: {"label": "Sequence motif", "obsolete": False}},
+                input_format_terms={FORMAT: {"label": None, "obsolete": False}},
+                output_format_terms={FORMAT: {"label": "FASTA", "obsolete": False}},
             ),
         ]
         assert result.total_matches == 4  # bio.tools count, not len(matches)
@@ -172,7 +176,7 @@ class TestQueryBiotools:
         request = BiotoolsQueryExactRequest(biotools_id="tool_b")
         result = await query_biotools_by_text_exact_match(request, MockContext())
         assert isinstance(result, BiotoolsQueryResponse)
-        assert result.total_matches == 1  
+        assert result.total_matches == 1
         assert result.matches[0].name == "tool_b"
         assert fake_api_exact.call_args.args[0] == "https://bio.tools/api/t/tool_b"
 

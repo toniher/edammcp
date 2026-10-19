@@ -16,6 +16,7 @@ API_URL = "https://bio.tools/api/t/"
 EDAM_URI = re.compile(r"https?://edamontology\.org/((topic|operation|data|format)_\d+)")
 FILTER_KEYS = {"topic": "topicID", "operation": "operationID", "data": "dataTypeID", "format": "dataFormatID"}
 
+
 def _is_obsolete(uri: str) -> bool:
     """True if uri is obsolete or unknown to EDAM. Loads the ontology on first use, retrying after a failure."""
     global _loaded
@@ -83,6 +84,7 @@ def _search(params: dict, max_results: int, matches: list[BiotoolsMatch], seen: 
         page += 1
         sleep(1)  # be polite to the bio.tools API between pages
 
+
 def _search_by_id(biotools_id: str, matches: list[BiotoolsMatch]) -> int:
     r = requests.get(f"{API_URL}{biotools_id}", params={"format": "json"}, timeout=(3.05, 30))
     if r.status_code == 404:
@@ -90,6 +92,7 @@ def _search_by_id(biotools_id: str, matches: list[BiotoolsMatch]) -> int:
     r.raise_for_status()
     matches.append(_to_match(r.json()))
     return 1
+
 
 def query_by_text(
     seed: str,
@@ -110,7 +113,10 @@ def query_by_text(
     total = _search({"q": seed, "sort": "score"}, max_results, matches, set())
     return matches[:max_results], total
 
-def query_by_text_exact_match(name: str | None = None, biotools_id: str | None = None) -> tuple[list[BiotoolsMatch], int]:
+
+def query_by_text_exact_match(
+    name: str | None = None, biotools_id: str | None = None
+) -> tuple[list[BiotoolsMatch], int]:
     """Search for tools in bio.tools matching the name or the biotools_id identifier in the repository.
 
     Args:

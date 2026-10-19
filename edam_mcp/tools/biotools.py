@@ -2,7 +2,12 @@ import asyncio
 
 from fastmcp.server import Context
 
-from ..models.biotools import BiotoolsQueryResponse, BiotoolsQueryTermsRequest, BiotoolsQueryTextRequest, BiotoolsQueryExactRequest
+from ..models.biotools import (
+    BiotoolsQueryResponse,
+    BiotoolsQueryTermsRequest,
+    BiotoolsQueryTextRequest,
+    BiotoolsQueryExactRequest,
+)
 from ..ontology import biotools_searcher
 
 
@@ -52,7 +57,9 @@ async def query_biotools_by_text_exact_match(
     try:
         context.info(f"Query information - Tool name: {request.name} | Tool identifier: {request.biotools_id}")
 
-        matches, total = await asyncio.to_thread(biotools_searcher.query_by_text_exact_match, request.name, request.biotools_id)
+        matches, total = await asyncio.to_thread(
+            biotools_searcher.query_by_text_exact_match, request.name, request.biotools_id
+        )
         context.info(f"Found {total} tools, returning {len(matches)}")
         return BiotoolsQueryResponse(matches=matches, total_matches=total)
 
