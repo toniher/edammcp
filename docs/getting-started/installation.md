@@ -182,10 +182,18 @@ EDAM_EMBEDDING_MODEL=all-MiniLM-L6-v2
 
 # Cache Configuration
 EDAM_CACHE_TTL=3600
+EDAM_CACHE_DIR=./.cache
+EDAM_USE_CHROMADB=false
 
 # Logging Configuration
 EDAM_LOG_LEVEL=INFO
 ```
+
+### Persistent embedding cache
+
+The server embeds every EDAM concept the first time it gets a mapping request. Without ChromaDB this happens again after every restart. Set `EDAM_USE_CHROMADB=true` to keep the embeddings in `$EDAM_CACHE_DIR/default.db`. Later starts reuse them and only re-embed concepts that are new or changed in EDAM. If you change `EDAM_EMBEDDING_MODEL`, the database is rebuilt.
+
+MCP clients often start the server from a different working directory, so set `EDAM_CACHE_DIR` to an absolute path.
 
 ### Configuration File
 

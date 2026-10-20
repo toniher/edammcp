@@ -414,6 +414,8 @@ class Settings(BaseSettings):
 | `EDAM_EMBEDDING_MODEL`      | all-MiniLM-L6-v2 | Sentence transformer model    |
 | `EDAM_CACHE_TTL`            | 3600             | Cache TTL in seconds          |
 | `EDAM_LOG_LEVEL`            | INFO             | Logging level                 |
+| `EDAM_USE_CHROMADB`         | false            | Store embeddings in ChromaDB  |
+| `EDAM_CACHE_DIR`            | ./.cache         | Cache directory               |
 
 ## 🚀 Direct API Usage
 
